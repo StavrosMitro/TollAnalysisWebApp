@@ -27,17 +27,32 @@ const INSECURE_SECRETS = new Set([
   'dev-secret',
 ]);
 
-const DEV_JWT_FALLBACK = 'dev-only-insecure-jwt-secret-change-me';
+const DEV_JWT_FALLBACK = 'dev-only-insecure-jwt-secret-change-me-not-for-any-real-use';
+
+// HMAC-SHA256 (HS256) keys should carry at least as much entropy as the hash
+// output: 256 bits = 32 bytes. Generate with `openssl rand -hex 32` (64 chars).
+const MIN_JWT_SECRET_BYTES = 32;
+
+function looksLowEntropy(value) {
+  // Cheap guard against obviously weak long strings (e.g. "aaaa...", "0000...").
+  return /^(.)\1+$/.test(value) || /^(012|abc|password|secret)/i.test(value);
+}
 
 function resolveJwtSecret() {
   const provided = process.env.JWT_SECRET;
 
   if (isProduction) {
-    if (!provided || INSECURE_SECRETS.has(provided) || provided.length < 16) {
+    const bytes = provided ? Buffer.byteLength(provided, 'utf8') : 0;
+    if (
+      !provided ||
+      INSECURE_SECRETS.has(provided) ||
+      bytes < MIN_JWT_SECRET_BYTES ||
+      looksLowEntropy(provided)
+    ) {
       // eslint-disable-next-line no-console
       console.error(
-        '[config] FATAL: JWT_SECRET is missing, too short (<16 chars) or a known ' +
-          'insecure value. Refusing to start in production.'
+        '[config] FATAL: JWT_SECRET is missing, weak, or shorter than 32 bytes. ' +
+          'Refusing to start in production. Generate one with: openssl rand -hex 32'
       );
       process.exit(1);
     }
@@ -100,6 +115,18 @@ const config = {
   jwtSecret: resolveJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
 
+  // Public portfolio demo: a dedicated, fictional, read-only identity.
+  // Short-lived token (default 90 min, clamped to 60-120 min).
+  demo: {
+    email: process.env.DEMO_USER_EMAIL || 'demo@toll-analysis.example',
+    role: 'demo',
+    tokenExpiresIn: (() => {
+      const raw = parseInt(process.env.DEMO_TOKEN_TTL_MINUTES, 10);
+      const minutes = Number.isFinite(raw) ? Math.min(120, Math.max(60, raw)) : 90;
+      return `${minutes}m`;
+    })(),
+  },
+
   corsOrigins: resolveCorsOrigins(),
 
   db: {
@@ -126,10 +153,27 @@ const config = {
       : path.join(__dirname, 'client'),
   },
 
-  // Feature flags. Destructive / expensive operations can be turned off
-  // entirely (used later by the public demo; already wired here so the
-  // switch exists).
-  disableDestructiveOps: process.env.DISABLE_DESTRUCTIVE_OPS === 'true',
 };
+
+// Feature flags - read live (as getters) so they can be toggled at runtime and
+// in tests without reloading the module. `config` stays the only place that
+// reads process.env.
+Object.defineProperty(config, 'disableDestructiveOps', {
+  enumerable: true,
+  get() {
+    return process.env.DISABLE_DESTRUCTIVE_OPS === 'true';
+  },
+});
+
+// When true, a company-role user may only query their OWN operator's data on
+// the operator-scoped analytics/forecast endpoints (admin + demo are
+// unaffected). Default OFF - the current API treats the operator id purely as
+// a selector and the sample dataset is shared. See docs/AUTHORIZATION.md.
+Object.defineProperty(config, 'enforceCompanyScope', {
+  enumerable: true,
+  get() {
+    return process.env.ENFORCE_COMPANY_SCOPE === 'true';
+  },
+});
 
 module.exports = config;

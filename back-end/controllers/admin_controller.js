@@ -8,6 +8,11 @@ const util = require('util');
 const config = require('../config');
 const execPromise = util.promisify(exec);
 
+// Authenticated admin health probe.
+//   - missing / invalid token   -> 401  (authenticateToken middleware)
+//   - authenticated non-admin    -> 403  (authorizeRole middleware)
+//   - admin + database reachable -> 200
+//   - admin + database down      -> 503  (dependency failure, NOT an auth failure)
 exports.healthcheck = async (req, res) => {
     const dbServiceInstance = DbService.getDbServiceInstance();
     try {
@@ -15,18 +20,17 @@ exports.healthcheck = async (req, res) => {
 
         res.status(200).json({
             status: "OK",
-            dbconnection: process.env.DATABASE || "Unknown",
+            dbconnection: config.db.database,
             n_stations: stats.n_stations,
             n_tags: stats.n_tags,
             n_passes: stats.n_passes,
         });
     } catch (error) {
-        console.error("Healthcheck Error:", error.message);
+        console.error("Healthcheck: database unavailable:", error.message);
 
-        res.status(401).json({
-            status: "failed",
-            dbconnection: process.env.DATABASE || "Unknown",
-            info: error.message,
+        res.status(503).json({
+            status: "unavailable",
+            dbconnection: config.db.database,
         });
     }
 };

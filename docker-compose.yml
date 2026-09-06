@@ -47,10 +47,12 @@ services:
       DUSER: ${DUSER:-toll_app}
       PASSWORD: ${PASSWORD:-toll_app_local_only}
       DATABASE: ${DATABASE:-toll_analysis}
-      # Must be >=16 chars and not a known-weak value or the app refuses to
-      # start in production. Override in .env for anything shared.
-      JWT_SECRET: ${JWT_SECRET:-local_demo_only_change_me_0e5b1f2a7c9d4e6f}
+      # Must be >=32 bytes of high-entropy material (openssl rand -hex 32) or the
+      # app refuses to start in production. The default here is a valid-shaped
+      # THROWAWAY for zero-config local runs - override in .env for anything shared.
+      JWT_SECRET: ${JWT_SECRET:-fb3afa47072220b5dc1798863721abb11e1c6272afe911376655a2363f4b6eaa}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      DEMO_TOKEN_TTL_MINUTES: ${DEMO_TOKEN_TTL_MINUTES:-90}
       # Same-origin in this stack -> no cross-origin access needed.
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
       # Block model training / DB resets / debt mutation / bulk upload.

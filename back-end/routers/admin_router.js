@@ -141,8 +141,9 @@ router.post(
  *       500:
  *         description: Σφάλμα κατά την ανάκτηση των χρηστών.
  */
-// Helper routers, will only be used by cli
-router.get("/users", authenticateToken, authorizeRole(ADMIN_ROLES), adminController.getUsers);
+// User administration (CLI-facing). Also gated by the destructive-ops switch:
+// exposing / changing accounts is not part of the public demo.
+router.get("/users", authenticateToken, authorizeRole(ADMIN_ROLES), blockDestructiveOps, adminController.getUsers);
 
 /**
  * @openapi
@@ -184,18 +185,20 @@ router.get("/users", authenticateToken, authorizeRole(ADMIN_ROLES), adminControl
  *       500:
  *         description: Σφάλμα κατά την ενημέρωση ή δημιουργία του χρήστη.
  */
-router.post("/usermod", authenticateToken, authorizeRole(ADMIN_ROLES), adminController.userMod);
+router.post("/usermod", authenticateToken, authorizeRole(ADMIN_ROLES), blockDestructiveOps, adminController.userMod);
 router.delete(
   '/userdelete/:username',
   authenticateToken,
   authorizeRole(ADMIN_ROLES),
+  blockDestructiveOps,
   adminController.deleteUser
 );
 
 router.post(
   '/setrole',
-  authenticateToken, 
-  authorizeRole(ADMIN_ROLES), 
+  authenticateToken,
+  authorizeRole(ADMIN_ROLES),
+  blockDestructiveOps,
   adminController.setUserRole
 );
 module.exports = router;
