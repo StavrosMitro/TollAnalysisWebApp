@@ -4,7 +4,10 @@
   "description": "Ενδεικτικά περιεχόμενα:",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest --config jest.unit.config.js",
+    "test:unit": "jest --config jest.unit.config.js",
+    "test:integration": "bash scripts/run-integration.sh",
+    "test:integration:jest": "jest --config jest.integration.config.js --forceExit"
   },
   "keywords": [],
   "author": "",
