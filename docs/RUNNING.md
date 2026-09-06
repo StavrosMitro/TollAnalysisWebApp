@@ -99,18 +99,24 @@ Frontend dev server: <http://localhost:3000> (proxies API calls to :9115).
 
 ---
 
+## Public demo
+
+No credentials needed - the landing page has an **"Explore Live Demo"** button.
+It calls `POST /api/auth/demo-login`, which issues a short-lived (~90 min),
+read-only `demo` token for the seeded fictional identity
+`demo@toll-analysis.example`. Demo users can browse the map, analytics and
+forecasts; every write / admin / training operation is denied. See
+`docs/AUTHORIZATION.md`.
+
 ## Tests
 
-```bash
-# Backend unit tests (mock the DB - no database needed)
-cd back-end && npm test
+| Command | What it runs | Needs |
+|---|---|---|
+| `cd back-end && npm test` | Backend **unit** tests (`jest.unit.config.js`). DB, Python and filesystem are mocked. | Node only |
+| `cd back-end && npm run test:unit` | same as `npm test` | Node only |
+| `cd back-end && npm run test:integration` | Spins a **fresh disposable MySQL** (`toll_analysis_test`, own container), runs `testing/integration/*` against the real app, tears the DB down afterwards. Refuses to run unless `NODE_ENV=test`, `DATABASE` ends `_test`, `ALLOW_DESTRUCTIVE_TESTS=true` (the wrapper sets these). | Docker |
+| `cd front-end && CI=true npm test` | Frontend tests | Node only |
+| `cd front-end && npm run build` | Frontend production build | Node only |
 
-# Backend integration tests additionally need a running seeded DB
-# (start `docker compose up db` first, point .env at 127.0.0.1:3307)
-
-# Frontend
-cd front-end && CI=true npm test
-
-# Frontend production build
-cd front-end && npm run build
-```
+`INTEGRATION_ML=true npm run test:integration` also runs the forecast test (needs
+`PYTHON_BIN` pointing at an interpreter with scikit-learn).
