@@ -39,3 +39,45 @@ export function authHeaders() {
   }
   return token ? { 'x-observatory-auth': token } : {};
 }
+
+/**
+ * True if `token` is a JWT that is present and not expired. Used to keep an
+ * expired session (e.g. an expired demo token) from reaching protected routes.
+ */
+export function isTokenValid(token) {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return !payload.exp || payload.exp * 1000 > Date.now();
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Start a public demo session. No credentials. Resolves to the short-lived
+ * demo token or throws with a user-facing message.
+ */
+export async function requestDemoSession() {
+  let res;
+  try {
+    res = await fetch(apiUrl('/auth/demo-login'), { method: 'POST' });
+  } catch (e) {
+    throw new Error('Could not reach the server. Please try again.');
+  }
+  let body = {};
+  try {
+    body = await res.json();
+  } catch (e) {
+    /* ignore */
+  }
+  if (!res.ok || !body.token) {
+    const msg =
+      (body.error && body.error.message) ||
+      (res.status === 429
+        ? 'Too many demo sessions from your network. Please wait a few minutes.'
+        : 'The live demo is unavailable right now. Please try again later.');
+    throw new Error(msg);
+  }
+  return body.token;
+}

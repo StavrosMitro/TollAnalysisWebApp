@@ -48,6 +48,49 @@ const logout = (req, res) => {
     }
 };
 
+/**
+ * Public portfolio-demo login.
+ *
+ * Takes NO input (no email/password/role/company/permissions). It only issues a
+ * short-lived token for the single, deterministically-seeded `demo` identity -
+ * a fictional platform-wide read-only observer. The token carries the minimum
+ * claims the auth middleware needs (`user_role: 'demo'`). Any request body is
+ * ignored, so a caller cannot request a different role.
+ */
+const demoLogin = async (req, res) => {
+    try {
+        const user = await dbService.getUser(config.demo.email);
+        if (!user || user.user_role !== config.demo.role) {
+            return res.status(503).json({
+                error: {
+                    code: 'DEMO_UNAVAILABLE',
+                    message: 'The public demo is not available right now.',
+                },
+            });
+        }
+
+        const token = jwt.sign(
+            { user_role: config.demo.role, user_email: config.demo.email },
+            config.jwtSecret,
+            { expiresIn: config.demo.tokenExpiresIn }
+        );
+
+        return res.status(200).json({
+            token,
+            role: config.demo.role,
+            expiresIn: config.demo.tokenExpiresIn,
+        });
+    } catch (err) {
+        console.error('Error during demo login:', err.message);
+        return res.status(503).json({
+            error: {
+                code: 'DEMO_UNAVAILABLE',
+                message: 'The public demo is temporarily unavailable.',
+            },
+        });
+    }
+};
+
 const whoami = (req, res) => {
     const token = req.headers['x-observatory-auth'];
 
@@ -66,4 +109,4 @@ const whoami = (req, res) => {
     }
 };
 
-module.exports = { authenticate, logout, whoami };
+module.exports = { authenticate, demoLogin, logout, whoami };

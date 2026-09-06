@@ -6,19 +6,30 @@ import MapPage from './pages/MapPage';
 import DebtsPage from './pages/DebtsPage';
 import StatsDashboard from './pages/StatsDashboard';
 import MachineLearning from './pages/MachineLearning';
-import LoginPage from './pages/LoginPage'; // Import LoginPage
+import LoginPage from './pages/LoginPage';
+import { isTokenValid } from './api/config';
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+  const [isLoggedIn, setIsLoggedIn] = useState(() => isTokenValid(localStorage.getItem('token')));
 
-  // Monitor token changes to update login state
+  // Keep login state in sync with the stored token (covers demo login, logout,
+  // and an expired token that another tab cleared).
   useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem('token'));
+    const sync = () => setIsLoggedIn(isTokenValid(localStorage.getItem('token')));
+    sync();
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
   }, []);
 
-  // PrivateRoute component to restrict access
+  // Protected routes require a present, non-expired token. An expired token is
+  // cleared and the visitor is sent to the landing page.
   const PrivateRoute = ({ children }) => {
-    return isLoggedIn ? children : <Navigate to="/login" />;
+    const token = localStorage.getItem('token');
+    if (isTokenValid(token)) return children;
+    if (token) {
+      localStorage.removeItem('token');
+    }
+    return <Navigate to="/" replace />;
   };
 
   return (
@@ -27,7 +38,7 @@ function App() {
         <Header isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<WelcomePage />} />
+          <Route path="/" element={<WelcomePage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />} />
           <Route path="/map" element={<MapPage />} />
 
           {/* Protected Routes */}
