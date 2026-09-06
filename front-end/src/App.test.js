@@ -1,8 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+// Smoke test: the app mounts and the landing page renders its heading.
+// (Replaces the default Create React App "learn react" boilerplate test,
+// which never matched this application.)
+test('renders the landing page without crashing', () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: /toll management system/i })
+  ).toBeInTheDocument();
 });

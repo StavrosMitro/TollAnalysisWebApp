@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./LoginPage.css"; // Optional styling
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { apiUrl } from "../api/config";
 
 function LoginPage({ setIsLoggedIn }) {
   const [email, setEmail] = useState("");
@@ -41,7 +42,7 @@ function LoginPage({ setIsLoggedIn }) {
     setLoading(true); // Start loading
     try {
       // Make a POST request to the /api/login endpoint
-      const response = await fetch("http://localhost:9115/api/login", {
+      const response = await fetch(apiUrl("/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

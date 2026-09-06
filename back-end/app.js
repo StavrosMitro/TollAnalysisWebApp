@@ -1,69 +1,66 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const fs = require('fs');
+
+const config = require('./config');
+const DbService = require('./dbService');
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// --- Middleware ----------------------------------------------------------
+// CORS is driven entirely by configuration. In production the frontend is
+// served same-origin so the allow-list is empty by default (no cross-origin
+// access); in development it defaults to http://localhost:3000.
+const corsOptions =
+  config.corsOrigins.length > 0
+    ? { origin: config.corsOrigins, allowedHeaders: ['Content-Type', 'x-observatory-auth'] }
+    : { origin: false };
+app.use(cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Static assets that pre-date this change (sample figures / uploads).
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/debt_figures', express.static(path.join(__dirname, 'debt_figures')));
-app.use('/static', express.static(path.join(__dirname, 'public')));
 
-// Swagger Configuration
-const options = {
-    definition: {
-        openapi: '3.0.0',
-        info: {
-            title: 'API Documentation',
-            version: '1.0.0',
-            description: 'This is the API documentation generated from JSDoc comments.',
-        },
-        servers: [
-            {
-                url: 'http://localhost:9115/api',
-                description: 'Development server',
-            },
-        ],
-    },
-    apis: [path.join(__dirname, 'routers', '*.js')], // Make sure this path matches your project structure
-};
-
-// Generate Swagger Docs
-const specs = swaggerJsdoc(options);
-
-// Serve Swagger UI
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs));
-
-
-const openapiFilePath = path.join(__dirname, 'openapi.json');
-
-// Serve OpenAPI JSON
-app.get('/api/openapi.json', (req, res) => {
+// --- Health check ------------------------------------------------------
+// Public, unauthenticated. Returns 200 only when the process is up AND the
+// database answers; 503 (non-sensitive body) otherwise. Used by
+// docker-compose / hosting platforms for readiness.
+app.get('/healthz', async (req, res) => {
     try {
-        // Generate and save OpenAPI JSON file
-        fs.writeFileSync(openapiFilePath, JSON.stringify(specs, null, 2), 'utf8');
-        console.log('✅ OpenAPI JSON file has been saved at:', openapiFilePath);
-
-        // Send the JSON response
-        res.setHeader('Content-Type', 'application/json');
-        res.json(specs);
-    } catch (error) {
-        console.error('❌ Error saving OpenAPI JSON:', error);
-        res.status(500).json({ error: 'Failed to generate and save OpenAPI JSON.' });
+        await DbService.getDbServiceInstance().ping();
+        return res.status(200).json({ status: 'ok', database: 'up' });
+    } catch (err) {
+        return res.status(503).json({ status: 'unavailable', database: 'down' });
     }
 });
 
+// --- Swagger / OpenAPI -------------------------------------------------
+const swaggerSpec = swaggerJsdoc({
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'Toll Analysis API',
+            version: '1.0.0',
+            description: 'REST API for the Toll Passages Management and Analysis application.',
+        },
+        servers: [{ url: '/api', description: 'Same-origin API' }],
+    },
+    apis: [path.join(__dirname, 'routers', '*.js')],
+});
 
-// Import Routes
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/api/openapi.json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.json(swaggerSpec);
+});
+
+// --- API routes ------------------------------------------------------
 const passing_toll_routes = require('./routers/passing_toll_router');
 const upload_passages_routes = require('./routers/upload_passages_router');
 const cancel_debts = require('./routers/cancel_debts_router');
@@ -79,7 +76,6 @@ const training = require('./routers/training_router');
 const peak_hour = require('./routers/peak_hour_router');
 const adminRouter = require('./routers/admin_router');
 
-// Use routes
 app.use('/api/passing_toll', passing_toll_routes);
 app.use('/api/upload_passages', upload_passages_routes);
 app.use('/api/cancel_debts', cancel_debts);
@@ -95,19 +91,42 @@ app.use('/api/peak_hour', peak_hour);
 app.use('/api/training', training);
 app.use('/api/admin', adminRouter);
 
-// Root route
-app.get('/', (req, res) => {
-    res.send('Simple root-route');
-});
-
-// Invalid API endpoint handler
-app.use('/api/*', (req, res) => {
+// Unknown API endpoint -> 400 (kept for backwards compatibility).
+app.use('/api', (req, res) => {
     res.status(400).json({ error: 'Invalid API endpoint' });
 });
 
-// Catch-all 404 handler
+// --- React production build (same-origin serving) --------------------
+// When a build is present the backend serves it and provides the SPA
+// history fallback WITHOUT intercepting /api/* (already handled above).
+const clientBuildDir = config.paths.clientBuild;
+const clientIndexHtml = path.join(clientBuildDir, 'index.html');
+
+if (fs.existsSync(clientIndexHtml)) {
+    app.use(express.static(clientBuildDir));
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api') || req.path === '/healthz') return next();
+        return res.sendFile(clientIndexHtml);
+    });
+} else {
+    app.get('/', (req, res) => {
+        res.status(200).send('Toll Analysis API is running. No frontend build bundled.');
+    });
+}
+
+// Final catch-all.
 app.use((req, res) => {
     res.status(404).json({ error: 'Not found' });
+});
+
+// Centralised error handler (last resort - avoids hanging requests and
+// double responses when a route handler throws synchronously).
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+    // eslint-disable-next-line no-console
+    console.error('[unhandled error]', err && err.message);
+    if (res.headersSent) return;
+    res.status(500).json({ error: 'Internal server error' });
 });
 
 module.exports = app;

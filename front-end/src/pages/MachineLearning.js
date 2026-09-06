@@ -12,6 +12,7 @@ import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './MachineLearning.css';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../api/config';
 
 // Helper function to format dates as dd/mm/yyyy
 const formatDate = (dateString) => {
@@ -381,6 +382,7 @@ export default function MLDashboard() {
     };
 
     checkToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const token = localStorage.getItem('token');
@@ -390,7 +392,7 @@ export default function MLDashboard() {
     setTrainingStatus('Training models...');
     setError('');
     try {
-      const response = await fetch('http://localhost:9115/api/training', {
+      const response = await fetch(`${API_BASE_URL}/training`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -399,7 +401,7 @@ export default function MLDashboard() {
       });
 
       if (response.status === 200) {
-        const data = await response.json();
+        await response.json();
         setTrainingStatus('Training completed successfully');
       } else if (response.status === 204) {
         setError('Η εκπαίδευση ολοκληρώθηκε, αλλά δεν επέστρεψε δεδομένα.');
@@ -439,7 +441,7 @@ export default function MLDashboard() {
       const fromDate = dateRange.from.replace(/-/g, '');
       const toDate = dateRange.to.replace(/-/g, '');
       const response = await fetch(
-        `http://localhost:9115/api/peak_hour/${selectedCompany}/${fromDate}/${toDate}`,
+        `${API_BASE_URL}/peak_hour/${selectedCompany}/${fromDate}/${toDate}`,
         {
           method: 'GET',
           headers: {
@@ -503,7 +505,7 @@ export default function MLDashboard() {
     try {
       const formattedDate = forecastDate.replace(/-/g, '');
       const response = await fetch(
-        `http://localhost:9115/api/forecast/${selectedCompany}/${formattedDate}`,
+        `${API_BASE_URL}/forecast/${selectedCompany}/${formattedDate}`,
         {
           method: 'GET',
           headers: {

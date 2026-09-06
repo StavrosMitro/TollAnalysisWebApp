@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import './Header.css';
+import { apiUrl } from '../api/config';
 
 function Header({ isLoggedIn, setIsLoggedIn }) {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ function Header({ isLoggedIn, setIsLoggedIn }) {
     }
 
     try {
-      const response = await fetch('http://localhost:9115/api/logout', {
+      const response = await fetch(apiUrl('/logout'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

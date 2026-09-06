@@ -1,153 +1,125 @@
-const { format } = require('date-fns');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const DbService = require('../dbService.js');
 const json2csv = require('json2csv').parse;
+const config = require('../config');
+
+const PREDICT_SCRIPT = path.join(config.paths.mlDir, 'predict_peak_hours.py');
 
 const peak_controller = async (req, res, next) => {
     try {
         const { company_id, DateFrom, DateTo } = req.params;
         const formatQuery = req.query.format || 'json';
 
-        // Validate required parameters
         if (!company_id || !DateFrom || !DateTo) {
             return res.status(400).json({ error: 'Missing required parameters' });
         }
 
-        // Ensure DateFrom and DateTo are in correct format (YYYYMMDD)
         if (!/^\d{8}$/.test(DateFrom) || !/^\d{8}$/.test(DateTo)) {
             return res.status(400).json({ error: 'Invalid date format. Use YYYYMMDD.' });
         }
 
-        // Convert DateFrom and DateTo to Date objects for comparison
         const startDate = new Date(`${DateFrom.slice(0, 4)}-${DateFrom.slice(4, 6)}-${DateFrom.slice(6, 8)}`);
         const endDate = new Date(`${DateTo.slice(0, 4)}-${DateTo.slice(4, 6)}-${DateTo.slice(6, 8)}`);
 
-        // Generate array of dates between DateFrom and DateTo
         const dateArray = [];
-        let currentDate = startDate;
+        const currentDate = startDate;
         while (currentDate <= endDate) {
-            dateArray.push(currentDate.toISOString().slice(0, 10)); // YYYY-MM-DD format
-            currentDate.setDate(currentDate.getDate() + 1); // Increment by one day
+            dateArray.push(currentDate.toISOString().slice(0, 10));
+            currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        // Fetch toll data from the database
         const dbService = DbService.getDbServiceInstance();
         const tolls_of_company = await dbService.peak_input_data(company_id, DateFrom, DateTo);
 
-        // Create CSV data by iterating over each toll and each date
         const csvData = [];
-        tolls_of_company.forEach(toll => {
-            dateArray.forEach(dates => {
-                csvData.push({
-                    passage_date: dates,
-                    company: company_id,
-                });
+        (tolls_of_company || []).forEach(() => {
+            dateArray.forEach((d) => {
+                csvData.push({ passage_date: d, company: company_id });
             });
         });
 
-        const folderPath = path.join(__dirname, '../ml/input_peak_hours');
-        if (!fs.existsSync(folderPath)) {
-            fs.mkdirSync(folderPath, { recursive: true }); 
-        }
+        const inputDir = path.join(config.paths.runtimeDir, 'peak_input');
+        fs.mkdirSync(inputDir, { recursive: true });
+        const filePath = path.join(inputDir, `company_${company_id}_passages.csv`);
+        fs.writeFileSync(filePath, json2csv(csvData));
 
-        const csvData1 = json2csv(csvData);
-        const filePath = path.join(folderPath, `company_${company_id}_passages.csv`);
-
-        // Write the CSV file
-        fs.writeFileSync(filePath, csvData1);
-
-        // Proceed with the prediction logic after creating the CSV
         return makePeakHourPrediction(company_id, res, formatQuery, filePath);
     } catch (error) {
-        console.error('[forecast_controller] Error:', error.message);
+        console.error('[peak_controller] Error:', error.message);
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-
 async function makePeakHourPrediction(company_id, res, formatQuery, inputCsvPath) {
     try {
         const dbService = DbService.getDbServiceInstance();
-        const data_for_nop = await dbService.data_for_peak_hour(company_id);
+        const data_for_peak = await dbService.data_for_peak_hour(company_id);
 
-        if (!data_for_nop) {
-            return res.status(204).json({ error: 'No data found for the company' });
+        if (!data_for_peak || data_for_peak.length === 0) {
+            return res.status(204).send();
         }
 
-        const dict_id_input = ['AM', 'EG', 'GE', 'KO', 'MO', 'NAO', 'NO', 'OO'];
-
-        const modelFileMapping = dict_id_input.reduce((map, companyId) => {
-            const modelFolderPath = path.join(__dirname, '../models_peak_hours');
-            if (!fs.existsSync(modelFolderPath)) {
-                fs.mkdirSync(modelFolderPath, { recursive: true });
-            }
-
-            const modelFilePath = path.join(modelFolderPath, `model_${companyId}.pkl`);
-            map[companyId] = modelFilePath;
-            return map;
-        }, {});
-
-        const outputMapping = dict_id_input.reduce((map, companyId) => {
-            const folderPath = path.join(__dirname, '../ml/results_peak_hour');
-            if (!fs.existsSync(folderPath)) {
-                fs.mkdirSync(folderPath, { recursive: true });
-            }
-
-            const filePath = path.join(folderPath, `output_${companyId}_passages.csv`);
-            map[companyId] = filePath;
-            return map;
-        }, {});
-
-        if (!modelFileMapping[company_id]) {
-            return res.status(204).json({ error: `No model found for company: ${company_id}` });
+        const modelFilePath = path.join(config.paths.modelsPeakHours, `model_${company_id}.pkl`);
+        if (!fs.existsSync(modelFilePath)) {
+            return res.status(204).send();
         }
-        const pythonProcess = spawn('python3', [
-            './ml/predict_peak_hours.py', 
+
+        const outputDir = path.join(config.paths.runtimeDir, 'peak_results');
+        fs.mkdirSync(outputDir, { recursive: true });
+        const outputCsvPath = path.join(outputDir, `output_${company_id}_passages.csv`);
+
+        const pythonProcess = spawn(config.pythonBin, [
+            PREDICT_SCRIPT,
             '--company', company_id,
-            '--input_csv', inputCsvPath,  // Using the generated CSV
-            '--model_path', modelFileMapping[company_id],
-            '--output_csv', outputMapping[company_id]
+            '--input_csv', inputCsvPath,
+            '--model_path', modelFilePath,
+            '--output_csv', outputCsvPath,
         ]);
 
         let pythonOutput = '';
+        let responded = false;
+        const respond = (fn) => {
+            if (responded || res.headersSent) return;
+            responded = true;
+            fn();
+        };
 
-        pythonProcess.stdout.on('data', (data) => {
-            pythonOutput += data.toString();
+        pythonProcess.stdout.on('data', (data) => { pythonOutput += data.toString(); });
+        pythonProcess.stderr.on('data', (data) => {
+            console.error(`[predict_peak_hours.py stderr]: ${data.toString()}`);
         });
 
-        pythonProcess.stderr.on('data', (data) => {
-            console.error(`[Python STDERR]: ${data.toString()}`);
+        pythonProcess.on('error', (err) => {
+            console.error('[makePeakHourPrediction] failed to start python:', err.message);
+            respond(() => res.status(500).json({ error: 'Prediction engine unavailable' }));
         });
 
         pythonProcess.on('close', (code) => {
             if (code !== 0) {
-                console.error(`[makePassagePrediction] Python script exited with code ${code}`);
-                return res.status(500).json({ error: 'Error making predictions' });
+                return respond(() => res.status(500).json({ error: 'Error making predictions' }));
             }
-
             try {
                 const result = JSON.parse(pythonOutput);
                 if (!result || result.length === 0) {
-                    return res.status(204).json({ error: 'No predictions found' });
+                    return respond(() => res.status(204).send());
                 }
-
                 if (formatQuery === 'csv') {
-                    const csv = json2csv(result);
-                    res.header('Content-Type', 'text/csv');
-                    res.send(csv);
-                } else {
-                    res.json(result);
+                    return respond(() => {
+                        res.header('Content-Type', 'text/csv');
+                        res.status(200).send(json2csv(result));
+                    });
                 }
+                return respond(() => res.status(200).json(result));
             } catch (err) {
-                console.error('[makePassagePrediction] Error parsing Python output:', err.message);
-                res.status(500).json({ error: 'Invalid response from prediction engine' });
+                console.error('[makePeakHourPrediction] bad python output:', err.message);
+                return respond(() => res.status(500).json({ error: 'Invalid response from prediction engine' }));
             }
         });
     } catch (error) {
-        console.error('[makePassagePrediction] Error:', error.message);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('[makePeakHourPrediction] Error:', error.message);
+        if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
     }
 }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiUrl } from '../api/config';
 
 // Mapping of codes to Greek labels
 const namesMapping = {
@@ -259,7 +260,7 @@ const DebtsPage = () => {
         throw new Error('Δεν βρέθηκε το token. Παρακαλώ συνδεθείτε ξανά.');
       }
 
-      const response = await fetch('http://localhost:9115/api/get_debts_optimization', {
+      const response = await fetch(apiUrl('/get_debts_optimization'), {
         headers: {
           'Content-Type': 'application/json',
           'x-observatory-auth': token,
@@ -315,7 +316,7 @@ const DebtsPage = () => {
         throw new Error('Δεν βρέθηκε το token. Παρακαλώ συνδεθείτε ξανά.');
       }
 
-      const response = await fetch('http://localhost:9115/api/cancel_debts', {
+      const response = await fetch(apiUrl('/cancel_debts'), {
         method: 'PATCH', // Changed from 'POST' to 'PATCH'
         headers: {
           'Content-Type': 'application/json',
@@ -324,7 +325,7 @@ const DebtsPage = () => {
       });
 
       if (response.status === 200) {
-        const result = await response.json();
+        await response.json();
         alert('Η ακύρωση ολοκληρώθηκε επιτυχώς.');
         fetchDebtData();
       } else if (response.status === 204) {

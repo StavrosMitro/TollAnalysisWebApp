@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const passAnalysis_controller = require('../controllers/passAnalysis_controller');
-const { authenticateToken, authorizeRole } = require('../middlewares/authMiddleware');
+const { authenticateToken, authorizeRole, ANALYTICS_ROLES } = require('../middlewares/authMiddleware');
 
 /**
  * @openapi
@@ -90,7 +90,7 @@ const { authenticateToken, authorizeRole } = require('../middlewares/authMiddlew
  *       500:
  *         description: "Internal server error."
  */
-router.get('/:stationOpID/:tagOpID/:date_from/:date_to', authenticateToken, authorizeRole(["users","admin"]), passAnalysis_controller);
+router.get('/:stationOpID/:tagOpID/:date_from/:date_to', authenticateToken, authorizeRole(ANALYTICS_ROLES), passAnalysis_controller);
 
 router.get('*', (req, res) => {
     console.log("400 - Route not found");

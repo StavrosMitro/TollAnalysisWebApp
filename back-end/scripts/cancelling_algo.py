@@ -4,14 +4,17 @@ from mysql.connector import Error
 import heapq
 import sys
 import os
-import networkx as nx
-import matplotlib.pyplot as plt
 from dotenv import load_dotenv
-import plotly.graph_objects as go
 import csv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Output directory resolved relative to THIS file (never the caller's CWD).
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.environ.get(
+    "DEBT_FIGURES_DIR", os.path.join(SCRIPT_DIR, "..", "debt_figures")
+)
 
 class Solution:
     def __init__(self):
@@ -162,9 +165,8 @@ def visualize_graph(graph, title, filename):
     """)
 
     # Save the graph to an HTML file
-    output_dir = "../debt_figures"
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.abspath(os.path.join(output_dir, f"{filename}.html"))
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    output_path = os.path.abspath(os.path.join(OUTPUT_DIR, f"{filename}.html"))
     net.save_graph(output_path)
     print(output_path)  # Print only the absolute path
 
@@ -182,11 +184,10 @@ if __name__ == "__main__":
     visualize_graph(graph1, "Initial Debt Graph", "initial_debts")
     visualize_graph(graph2, "Final Debt Graph", "final_debts")
 
-    output_dir = "../debt_figures"
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     filename = "graph2"  # Name for the CSV file
-    output_path = os.path.abspath(os.path.join(output_dir, f"{filename}.csv"))
+    output_path = os.path.abspath(os.path.join(OUTPUT_DIR, f"{filename}.csv"))
 
     # Flatten and write graph2 to the CSV
     with open(output_path, mode='w', newline='') as file:

@@ -1,9 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, authorizeRole } = require('../middlewares/authMiddleware');
+const {
+    authenticateToken,
+    authorizeRole,
+    blockDestructiveOps,
+    ADMIN_ROLES,
+} = require('../middlewares/authMiddleware');
 const controller = require('../controllers/cancel_debts_controller');
 
-router.patch('/',authenticateToken, authorizeRole(["admin"]), controller.cancel_debts);
-//router.patch('/', controller.cancel_debts);
+// Mutates TotalDebts (settles balances to zero) - admin only + destructive switch.
+router.patch('/', authenticateToken, authorizeRole(ADMIN_ROLES), blockDestructiveOps, controller.cancel_debts);
 
 module.exports = router;

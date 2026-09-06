@@ -5,6 +5,7 @@ const csvParser = require("csv-parser");
 const { exec } = require("child_process");
 const bcrypt = require("bcrypt");
 const util = require('util');
+const config = require('../config');
 const execPromise = util.promisify(exec);
 
 exports.healthcheck = async (req, res) => {
@@ -133,11 +134,10 @@ exports.addPasses = async (req, res) => {
           return res.status(400).json({ status: "failed", info: "File not found: passages.csv" });
       }
 
-      const pythonScript = path.join(__dirname, "../scripts/passage2mysql.py");
-      console.log("Python Script Path:", pythonScript);
+      const pythonScript = path.join(config.paths.scriptsDir, "passage2mysql.py");
 
-      // Execute the Python script to process the file
-      exec(`python3 ${pythonScript} ${filePath}`, (error, stdout, stderr) => {
+      // Execute the Python script to process the file (paths are absolute).
+      exec(`"${config.pythonBin}" "${pythonScript}" "${filePath}"`, (error, stdout, stderr) => {
           if (error) {
               console.error(`Python script error: ${stderr}`);
               return res.status(500).json({ status: "failed", info: stderr.trim() });

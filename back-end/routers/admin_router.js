@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/admin_controller");
 const upload_controller = require("../controllers/upload_passages_controller");
-const { authenticateToken, authorizeRole } = require('../middlewares/authMiddleware');
+const { authenticateToken, authorizeRole, blockDestructiveOps, ADMIN_ROLES } = require('../middlewares/authMiddleware');
 
 /**
  * @openapi
@@ -34,7 +34,7 @@ const { authenticateToken, authorizeRole } = require('../middlewares/authMiddlew
  *         description: Unauthorized.
  */
 // Define the healthcheck route
-router.get("/healthcheck", authenticateToken, authorizeRole(["admin"]), adminController.healthcheck);
+router.get("/healthcheck", authenticateToken, authorizeRole(ADMIN_ROLES), adminController.healthcheck);
 
 /**
  * @openapi
@@ -58,7 +58,7 @@ router.get("/healthcheck", authenticateToken, authorizeRole(["admin"]), adminCon
  *         description: Σφάλμα κατά την επαναφορά των σταθμίδων.
  */
 // Reset stations route
-router.post("/resetstations", authenticateToken, authorizeRole(["admin"]), adminController.resetStations);
+router.post("/resetstations", authenticateToken, authorizeRole(ADMIN_ROLES), blockDestructiveOps, adminController.resetStations);
 
 /**
  * @openapi
@@ -82,7 +82,7 @@ router.post("/resetstations", authenticateToken, authorizeRole(["admin"]), admin
  *         description: Σφάλμα κατά την επαναφορά των διέρξεων.
  */
 // Reset passes route
-router.post("/resetpasses", authenticateToken, authorizeRole(["admin"]), adminController.resetPasses);
+router.post("/resetpasses", authenticateToken, authorizeRole(ADMIN_ROLES), blockDestructiveOps, adminController.resetPasses);
 
 /**
  * @openapi
@@ -110,7 +110,8 @@ router.post("/resetpasses", authenticateToken, authorizeRole(["admin"]), adminCo
 router.post(
     "/addpasses",
     authenticateToken,
-    authorizeRole(["admin"]),
+    authorizeRole(ADMIN_ROLES),
+    blockDestructiveOps,
     upload_controller.uploadCsv,
     adminController.addPasses
 );
@@ -141,7 +142,7 @@ router.post(
  *         description: Σφάλμα κατά την ανάκτηση των χρηστών.
  */
 // Helper routers, will only be used by cli
-router.get("/users", authenticateToken, authorizeRole(["admin"]), adminController.getUsers);
+router.get("/users", authenticateToken, authorizeRole(ADMIN_ROLES), adminController.getUsers);
 
 /**
  * @openapi
@@ -183,18 +184,18 @@ router.get("/users", authenticateToken, authorizeRole(["admin"]), adminControlle
  *       500:
  *         description: Σφάλμα κατά την ενημέρωση ή δημιουργία του χρήστη.
  */
-router.post("/usermod", authenticateToken, authorizeRole(["admin"]), adminController.userMod);
+router.post("/usermod", authenticateToken, authorizeRole(ADMIN_ROLES), adminController.userMod);
 router.delete(
   '/userdelete/:username',
   authenticateToken,
-  authorizeRole(['admin']),
+  authorizeRole(ADMIN_ROLES),
   adminController.deleteUser
 );
 
 router.post(
   '/setrole',
   authenticateToken, 
-  authorizeRole(['admin']), 
+  authorizeRole(ADMIN_ROLES), 
   adminController.setUserRole
 );
 module.exports = router;

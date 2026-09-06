@@ -1,0 +1,26 @@
+# Python runtime dependencies for the Toll Analysis backend.
+#
+# These versions are pinned exactly so the committed scikit-learn models
+# (trained with scikit-learn 1.6.0 on NumPy 2.x) load reproducibly.
+# Target interpreter: CPython 3.11.
+#
+# --- Machine learning (predict.py / predict_peak_hours.py) ---
+numpy==2.2.3
+scipy==1.15.2
+scikit-learn==1.6.0
+joblib==1.4.2
+threadpoolctl==3.5.0
+pandas==2.2.3
+python-dateutil==2.9.0.post0
+pytz==2025.1
+tzdata==2025.1
+
+# --- Database import scripts (passage2mysql.py / csv_to_mysql.py) ---
+mysql-connector-python==9.2.0
+
+# --- Debt-settlement visualisation (cancelling_algo.py) ---
+pyvis==0.3.2
+jinja2==3.1.5
+
+# --- Shared ---
+python-dotenv==1.0.1

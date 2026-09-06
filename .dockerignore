@@ -1,0 +1,35 @@
+# VCS
+.git
+.gitignore
+
+# Dependencies (reinstalled inside the image)
+**/node_modules
+
+# Build output
+front-end/build
+back-end/client
+
+# Local env / secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Runtime / generated artefacts
+back-end/var
+back-end/uploads1
+cli-client/token.json
+
+# Editor / OS noise
+**/*.log
+.DS_Store
+.vscode
+.idea
+
+# Docs that don't belong in the image
+documentation
+*.md
+!README.md
+
+# Python caches
+**/__pycache__
+**/*.pyc

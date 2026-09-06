@@ -1,26 +1,20 @@
-const dotenv = require('dotenv');
-dotenv.config();
-//check for the conection of db
-console.log('Database Config:');
-console.log('Host:', process.env.HOST);
-console.log('User:', process.env.DUSER);
-console.log('Password:', process.env.PASSWORD ? 'Set' : 'Not Set');
-console.log('Database:', process.env.DATABASE);
-console.log('Port:', process.env.DB_PORT);
-
 const fs = require('fs');
 const path = require('path'); // To handle folder paths
 const { Parser } = require('json2csv');
 const bcrypt = require("bcrypt");
 const mysql = require('mysql2');
+const config = require('./config');
 
-// Create a connection pool instead of a single connection
+// Create a connection pool instead of a single connection.
+// Connection parameters come exclusively from the central config module.
 const pool = mysql.createPool({
-    host: process.env.HOST,
-    user: process.env.DUSER,
-    password: process.env.PASSWORD,
-    database: process.env.DATABASE,
-    port: process.env.DB_PORT
+    host: config.db.host,
+    user: config.db.user,
+    password: config.db.password,
+    database: config.db.database,
+    port: config.db.port,
+    waitForConnections: true,
+    connectionLimit: 10,
 });
 
 // Promisify the pool.query method for easier use with async/await
@@ -40,10 +34,8 @@ class DbService {
     }
     async getLastPassageId() {
         try {
-            console.log('Fetching last passage_id...');
             const query = `SELECT MAX(passage_id) AS lastPassageId FROM Passages`;
-            const [rows] = await promisePool.query(query); // Use promisePool.query instead of this.pool.query
-            console.log('Query result:', rows);
+            const [rows] = await promisePool.query(query);
             return rows[0]?.lastPassageId || 0; // Return 0 if no records exist
         } catch (error) {
             console.error('Error in getLastPassageId:', error.message);
@@ -141,12 +133,16 @@ class DbService {
             throw error;
         }
     }
+    // Lightweight readiness probe for /healthz.
+    async ping() {
+        await promisePool.query('SELECT 1');
+        return true;
+    }
+
     async getUser(user_email) {
         try {
-            console.log('Fetching user with email:', user_email);
             const query = `SELECT * FROM user_login WHERE user_email = ?`;
             const [rows] = await promisePool.query(query, [user_email]);
-            console.log('Query result:', rows);
             return rows[0];
         } catch (error) {
             console.error('Error in getUser:', error.message);
@@ -405,14 +401,14 @@ ORDER BY grouped.passage_date;
               "INSERT INTO users (user_email, user_password, user_role) VALUES (?, ?, 'admin')",
               ["admin", hashedPassword]
             );
-            console.log("Admin account (admin/freepasses4all) created.");
+            console.log("Admin account created.");
           } else {
             // Update the existing user to reset its password to freepasses4all
             await connection.query(
               "UPDATE users SET user_password = ?, user_role='admin' WHERE user_email = 'admin'",
               [hashedPassword]
             );
-            console.log("Admin account password reset to freepasses4all.");
+            console.log("Admin account password reset.");
           }
       
           await connection.commit();

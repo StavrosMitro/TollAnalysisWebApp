@@ -34,7 +34,6 @@ const getTollStationPasses = async (req, res, next) => {
 
         const dbService = DbService.getDbServiceInstance();
         const passes = await dbService.getRecordsBetweenDate(tollStationID, formattedDateFrom, formattedDateTo);
-        console.log(passes)
 
         if (passes.length === 0) {
             return res.status(204).send(); // 204 No Content

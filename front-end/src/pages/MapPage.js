@@ -7,6 +7,7 @@ import "leaflet.markercluster";
 import axios from "axios";
 import "./MapPage.css";
 import { useNavigate } from "react-router-dom";
+import { apiUrl } from "../api/config";
 
 // Leaflet icon setup
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
@@ -20,6 +21,26 @@ L.Icon.Default.mergeOptions({
   shadowUrl,
 });
 
+// Stable module-level constants (not dependent on props/state) so they don't
+// retrigger effects on every render.
+const operatorTranslations = {
+  aegeanmotorway: "Aegean Motorway",
+  egnatia: "Egnatia Road",
+  gefyra: "Bridge",
+  kentrikiodos: "Central Road",
+  moreas: "Moreas",
+  naodos: "Attiki Odos",
+  neaodos: "New Road",
+  olympiaodos: "Olympia Road",
+};
+
+const customIcon = L.icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [0, -41],
+});
+
 function Map() {
   const mapRef = useRef(null);
   const markersRef = useRef(null);
@@ -28,24 +49,6 @@ function Map() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-
-  const operatorTranslations = {
-    aegeanmotorway: "Aegean Motorway",
-    egnatia: "Egnatia Road",
-    gefyra: "Bridge",
-    kentrikiodos: "Central Road",
-    moreas: "Moreas",
-    naodos: "Attiki Odos",
-    neaodos: "New Road",
-    olympiaodos: "Olympia Road",
-  };
-
-  const customIcon = L.icon({
-    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [0, -41],
-  });
 
   useEffect(() => {
     if (!mapRef.current) {
@@ -75,7 +78,7 @@ function Map() {
   useEffect(() => {
     const fetchTolls = async () => {
       try {
-        const response = await axios.get("http://localhost:9115/api/tolls", {
+        const response = await axios.get(apiUrl("/tolls"), {
         });
 
         if (response.status === 200) {
@@ -144,7 +147,7 @@ function Map() {
         markersRef.current.addLayer(marker);
       });
     }
-  }, [filteredTolls, customIcon, operatorTranslations]);
+  }, [filteredTolls]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;

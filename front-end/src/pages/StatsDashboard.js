@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './StatsDashboard.css'; // Ensure this CSS file exists for styling
+import { API_BASE_URL } from '../api/config';
 
 const AnalysisDashboard = () => {
   const navigate = useNavigate();
@@ -311,6 +312,7 @@ const AnalysisDashboard = () => {
       }
     };
     checkToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const handleLogout = () => {
@@ -402,7 +404,7 @@ const AnalysisDashboard = () => {
         handleLogout();
         return;
       }
-      const url = `http://localhost:9115/api/passAnalysis/${stationOpID}/${tagOpID}/${formattedDateFrom}/${formattedDateTo}`;
+      const url = `${API_BASE_URL}/passAnalysis/${stationOpID}/${tagOpID}/${formattedDateFrom}/${formattedDateTo}`;
       const response = await axios.get(url, {
         params: { format },
         headers: {
@@ -520,7 +522,7 @@ const AnalysisDashboard = () => {
         handleLogout();
         return;
       }
-      const url = `http://localhost:9115/api/chargesBy/${tollOpID}/${formattedDateFrom}/${formattedDateTo}`;
+      const url = `${API_BASE_URL}/chargesBy/${tollOpID}/${formattedDateFrom}/${formattedDateTo}`;
       const response = await axios.get(url, {
         params: { format },
         headers: {
@@ -639,7 +641,7 @@ const AnalysisDashboard = () => {
         handleLogout();
         return;
       }
-      const url = `http://localhost:9115/api/passesCost/${tollOpID}/${tagOpID}/${formattedDateFrom}/${formattedDateTo}`;
+      const url = `${API_BASE_URL}/passesCost/${tollOpID}/${tagOpID}/${formattedDateFrom}/${formattedDateTo}`;
       const response = await axios.get(url, {
         params: { format },
         headers: {
@@ -757,7 +759,7 @@ const AnalysisDashboard = () => {
         handleLogout();
         return;
       }
-      const url = `http://localhost:9115/api/tollStationPasses/${tollStationID}/${formattedDateFrom}/${formattedDateTo}`;
+      const url = `${API_BASE_URL}/tollStationPasses/${tollStationID}/${formattedDateFrom}/${formattedDateTo}`;
       const response = await axios.get(url, {
         params: { format },
         headers: {

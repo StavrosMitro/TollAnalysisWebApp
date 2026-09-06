@@ -1,91 +1,61 @@
-const { format } = require('date-fns');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const DbService = require('../dbService.js');
 const json2csv = require('json2csv').parse;
+const config = require('../config');
 
-const training_controller = async (req, res, next) => {
-    try {
-        const dbService = DbService.getDbServiceInstance();
-        const company_ids = ['AM', 'EG', 'GE', 'KO', 'MO', 'NAO', 'NO', 'OO'];
+const COMPANY_IDS = ['AM', 'EG', 'GE', 'KO', 'MO', 'NAO', 'NO', 'OO'];
+const TRAIN_SCRIPT = path.join(config.paths.mlDir, 'train.py');
 
-        const errors = [];
-        for (let i = 0; i < company_ids.length; i++) {
-            const data_for_nop = await dbService.data_for_nop(company_ids[i]);
-            if (!data_for_nop) {
-                errors.push({ company: company_ids[i], error: 'No data found' });
-                continue; // Skip training for this company
-            }
+/**
+ * Retrains the passage-volume models for every company.
+ * Pure worker: returns { errors } and never touches the HTTP response
+ * (the router owns the single response). Expensive + admin-only.
+ */
+async function runPassageTraining() {
+    const dbService = DbService.getDbServiceInstance();
+    const errors = [];
 
-            const csvFilePath = saveDataToCSV(company_ids[i], data_for_nop);
-
-            await training_the_models(company_ids[i], csvFilePath);
+    for (const companyId of COMPANY_IDS) {
+        const data = await dbService.data_for_nop(companyId);
+        if (!data || data.length === 0) {
+            errors.push({ company: companyId, error: 'No data found' });
+            continue;
         }
-        if (errors.length > 0) {
-            return res.status(404).json({
-                error: 'Data missing for one or more companies',
-                details: errors,
-            });
-        }
-        // return res.status(200).json({ message: 'Models trained successfully for all companies' });
-    } catch (error) {
-        console.error('[training_controller] Error:', error.message);
-        // return res.status(500).json({ error: 'Internal server error' });
+        const csvFilePath = saveDataToCSV(companyId, data);
+        await trainModel(companyId, csvFilePath);
     }
-};
 
-// Function to train models
-async function training_the_models(company_id, dataCsvPath) {
+    return { errors };
+}
+
+function trainModel(companyId, dataCsvPath) {
     return new Promise((resolve, reject) => {
-        try {
-            console.log(`[training_the_models] Starting training for ${company_id}`);
+        const proc = spawn(config.pythonBin, [
+            TRAIN_SCRIPT,
+            '--company', companyId,
+            '--data_csv', dataCsvPath,
+        ]);
 
-            const pythonProcess = spawn('python3', [
-                './ml/train.py',
-                '--company', company_id,
-                '--data_csv', dataCsvPath
-            ]);
-
-            let pythonOutput = '';
-
-            pythonProcess.stdout.on('data', (data) => {
-                pythonOutput += data.toString();
-            });
-
-            pythonProcess.stderr.on('data', (data) => {
-                console.error(`[Python STDERR]: ${data.toString()}`);
-            });
-
-            pythonProcess.on('close', (code) => {
-                if (code !== 0) {
-                    console.error(`[training_the_models] Python script exited with code ${code}`);
-                    return reject(new Error(`Python script exited with code ${code}`));
-                }
-
-                console.log(`[training_the_models] Training completed for ${company_id}`);
-                console.log(`[training_the_models] Output: ${pythonOutput}`);
-                resolve();
-            });
-        } catch (error) {
-            console.error('[training_the_models] Error:', error.message);
-            reject(error);
-        }
+        let stderr = '';
+        proc.stderr.on('data', (d) => { stderr += d.toString(); });
+        proc.on('error', (err) => reject(err));
+        proc.on('close', (code) => {
+            if (code !== 0) {
+                return reject(new Error(`train.py exited ${code} for ${companyId}: ${stderr.trim()}`));
+            }
+            resolve();
+        });
     });
 }
 
-function saveDataToCSV(company_id, data) {
-    const folderPath = path.join(__dirname, '../ml/training_data');
-    if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
-    }
-
-    const filePath = path.join(folderPath, `company_${company_id}_passages.csv`);
-    const csvData = json2csv(data);
-
-    fs.writeFileSync(filePath, csvData, 'utf8');
-    console.log(`[saveDataToCSV] Data for ${company_id} saved to ${filePath}`);
+function saveDataToCSV(companyId, data) {
+    const folderPath = path.join(config.paths.runtimeDir, 'training_data');
+    fs.mkdirSync(folderPath, { recursive: true });
+    const filePath = path.join(folderPath, `company_${companyId}_passages.csv`);
+    fs.writeFileSync(filePath, json2csv(data), 'utf8');
     return filePath;
 }
 
-module.exports = training_controller;
+module.exports = runPassageTraining;

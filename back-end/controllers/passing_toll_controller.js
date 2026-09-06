@@ -3,17 +3,18 @@ const path = require('path');
 const fs = require('fs');
 const DbService = require('../dbService.js'); // Database service
 const util = require('util');
+const config = require('../config');
 
 // Promisify the exec function for easier use with async/await
 const execPromise = util.promisify(exec);
 
 const passing_toll = async (req, res) => {
     // Define the upload directory
-    const uploadDir = path.join(__dirname, '../uploads');
+    const uploadDir = path.join(config.paths.backendRoot, 'uploads');
     const filename = 'passages.csv';
     const csvFilePath = path.join(uploadDir, filename);
 
-    const scriptDir = path.join(__dirname, '../scripts');
+    const scriptDir = config.paths.scriptsDir;
     const script_name = 'passage2mysql.py';
     const python_path = path.join(scriptDir, script_name);
 
@@ -36,13 +37,10 @@ const passing_toll = async (req, res) => {
         console.log("Let's get the p_id");
         const lastPId_before = lastPassageId; // Store the last passage ID before running the script
 
-        // Run the Python script
-        console.log('Running Python script...');
+        // Run the Python script (script + csv paths are absolute).
         const { stdout, stderr } = await execPromise(
-            `python3 "${python_escaped}" "${escapedFilePath}"`
+            `"${config.pythonBin}" "${python_escaped}" "${escapedFilePath}"`
         );
-
-        console.log('Python script executed successfully.');
 
         // Fetch the new records added since the last passage ID
         const newRecords = await dbService.getRecordsBetweenIds(lastPId_before);

@@ -1,8 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/passing_toll_controller');
-const { authenticateToken, authorizeRole } = require('../middlewares/authMiddleware');
+const {
+    authenticateToken,
+    authorizeRole,
+    blockDestructiveOps,
+    ADMIN_ROLES,
+} = require('../middlewares/authMiddleware');
 
-router.put('/',authenticateToken, authorizeRole(["users","admin"]), controller.passing_toll);
-//router.put('/', controller.passing_toll);
+// Runs a DB-mutating Python import over uploads/passages.csv - admin only + destructive switch.
+router.put('/', authenticateToken, authorizeRole(ADMIN_ROLES), blockDestructiveOps, controller.passing_toll);
+
 module.exports = router;

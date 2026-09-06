@@ -2,26 +2,25 @@ const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const util = require('util');
+const config = require('../config');
 
 // Promisify the exec function for easier use with async/await
 const execPromise = util.promisify(exec);
 
 const cancel_debts = async (req, res) => {
-    console.log("We are in the controller");
+    const scriptDir = config.paths.scriptsDir;
+    const pythonPath = path.join(scriptDir, 'cancelling_algo.py');
 
-    const scriptDir = path.join(__dirname, '../scripts');
-    const scriptName = 'cancelling_algo.py';
-    const pythonPath = path.join(scriptDir, scriptName);
-
-    const uploadDir = path.join(__dirname, '../debt_figures');
+    const uploadDir = config.paths.debtFigures;
 
     try {
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
 
-        console.log('Running Python script...');
-        const { stdout } = await execPromise(`python3 "${pythonPath}"`);
+        // cancelling_algo.py resolves its own output dir from __file__, so it is
+        // independent of the server's working directory.
+        const { stdout } = await execPromise(`"${config.pythonBin}" "${pythonPath}"`);
 
         const filePaths = stdout.trim().split('\n');
 

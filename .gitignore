@@ -1,24 +1,45 @@
-# Environment variables
+# Environment variables / secrets
 .env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
 # Node modules
 node_modules/
 
-# SSL Certificates (Sensitive files, should not be committed)
+# Production builds
+front-end/build/
+back-end/client/
+
+# Runtime-generated artefacts (predictions, figures, temp CSVs)
+back-end/var/
+
+# CLI auth token (generated at login, must never be committed)
+cli-client/token.json
+
+# SSL Certificates (sensitive)
 cert.pem
 key.pem
-backend/key.pem
-backend/cert.pem
+back-end/key.pem
+back-end/cert.pem
 
-# Machine Learning Data (Assuming these are temporary/generated files)
-backend/ml/results/
-backend/ml/input/
-backend/ml/results_peak_hour/
-backend/ml/input/
-backend/ml/input_peak_hours/
+# Machine Learning runtime data (generated at request time)
+back-end/ml/results/
+back-end/ml/results_peak_hour/
+back-end/ml/input/
+back-end/ml/input_peak_hours/
 
 # Logs & Temp Files
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Python caches
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store

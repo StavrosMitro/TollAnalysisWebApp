@@ -1,0 +1,82 @@
+# Toll Analysis - local / demo stack.
+#
+#   docker compose up --build
+#
+# Brings up MySQL 8 (deterministically initialised from ./db/init) and one
+# application container that serves the React production build AND the REST API
+# on a single origin: http://localhost:9115
+#
+# All configuration has safe local defaults; override via a .env file next to
+# this one (see .env.example). For any non-local deployment you MUST set a
+# strong JWT_SECRET and real database credentials.
+
+services:
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=caching_sha2_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_local_only}
+      MYSQL_DATABASE: ${DATABASE:-toll_analysis}
+      MYSQL_USER: ${DUSER:-toll_app}
+      MYSQL_PASSWORD: ${PASSWORD:-toll_app_local_only}
+    volumes:
+      - db_data:/var/lib/mysql
+      # Verbatim copies of Database_mysql/{schema,data}.sql - run once on an
+      # empty data volume, in filename order.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root_local_only}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    ports:
+      # Host-side access for debugging only (container-to-container uses 3306).
+      - "${DB_HOST_PORT:-3307}:3306"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 9115
+      # DB connection (service name "db" on the compose network).
+      HOST: db
+      DB_PORT: 3306
+      DUSER: ${DUSER:-toll_app}
+      PASSWORD: ${PASSWORD:-toll_app_local_only}
+      DATABASE: ${DATABASE:-toll_analysis}
+      # Must be >=16 chars and not a known-weak value or the app refuses to
+      # start in production. Override in .env for anything shared.
+      JWT_SECRET: ${JWT_SECRET:-local_demo_only_change_me_0e5b1f2a7c9d4e6f}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      # Same-origin in this stack -> no cross-origin access needed.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      # Block model training / DB resets / debt mutation / bulk upload.
+      DISABLE_DESTRUCTIVE_OPS: ${DISABLE_DESTRUCTIVE_OPS:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${APP_HOST_PORT:-9115}:9115"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9115/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Optional DB browser. NOT part of the normal stack:
+  #   docker compose --profile tools up
+  adminer:
+    image: adminer:4
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${ADMINER_HOST_PORT:-8081}:8080"
+
+volumes:
+  db_data:
