@@ -1,67 +1,54 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import App from './App';
+import { ToastProvider } from './components/ui';
+import { AppRoutes } from './App';
 import { isTokenValid } from './api/config';
+import { makeToken } from './testUtils';
 
-// Build a token with a given exp (seconds). Signature is irrelevant to the
-// client-side validity check.
-function tokenWithExp(expSeconds) {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(JSON.stringify({ user_role: 'demo', exp: expSeconds }));
-  return `${header}.${payload}.sig`;
+function renderAt(route) {
+  return render(
+    <ToastProvider>
+      <MemoryRouter initialEntries={[route]}><AppRoutes /></MemoryRouter>
+    </ToastProvider>
+  );
 }
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  global.fetch = jest.fn(() => Promise.resolve({ ok: true, status: 200, json: async () => [] }));
+});
 
-test('renders the landing page without crashing', () => {
-  render(<App />);
-  expect(
-    screen.getByRole('heading', { name: /toll management system/i })
-  ).toBeInTheDocument();
+test('renders the landing page at "/"', () => {
+  renderAt('/');
+  expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /explore live demo/i })).toBeInTheDocument();
+});
+
+test('a protected route without a token redirects to the landing page', () => {
+  renderAt('/analytics');
+  expect(screen.getByRole('button', { name: /explore live demo/i })).toBeInTheDocument();
+});
+
+test('an expired token on a protected route is cleared and redirects home', () => {
+  localStorage.setItem('token', makeToken({ ttlSeconds: -60 }));
+  renderAt('/overview');
+  expect(localStorage.getItem('token')).toBeNull();
+  expect(screen.getByRole('button', { name: /explore live demo/i })).toBeInTheDocument();
+});
+
+test('legacy /stats route does not crash and lands on a valid page', () => {
+  renderAt('/stats');
+  expect(screen.getByRole('button', { name: /explore live demo/i })).toBeInTheDocument();
 });
 
 describe('isTokenValid', () => {
-  test('false for missing / malformed tokens', () => {
+  test('false for missing / malformed', () => {
     expect(isTokenValid(null)).toBe(false);
-    expect(isTokenValid('not-a-jwt')).toBe(false);
+    expect(isTokenValid('nope')).toBe(false);
   });
-  test('false for an expired token', () => {
-    expect(isTokenValid(tokenWithExp(Math.floor(Date.now() / 1000) - 60))).toBe(false);
-  });
-  test('true for a token that is still valid', () => {
-    expect(isTokenValid(tokenWithExp(Math.floor(Date.now() / 1000) + 3600))).toBe(true);
-  });
-});
-
-// A minimal stand-in for App's PrivateRoute to prove the redirect contract.
-function PrivateRoute({ children }) {
-  const token = localStorage.getItem('token');
-  if (isTokenValid(token)) return children;
-  if (token) localStorage.removeItem('token');
-  return <Navigate to="/" replace />;
-}
-
-describe('protected routes', () => {
-  const Protected = () => (
-    <MemoryRouter initialEntries={['/stats']}>
-      <Routes>
-        <Route path="/" element={<div>Landing</div>} />
-        <Route path="/stats" element={<PrivateRoute><div>Dashboard</div></PrivateRoute>} />
-      </Routes>
-    </MemoryRouter>
-  );
-
-  test('an expired token is cleared and the visitor lands on "/"', () => {
-    localStorage.setItem('token', tokenWithExp(Math.floor(Date.now() / 1000) - 5));
-    render(<Protected />);
-    expect(screen.getByText('Landing')).toBeInTheDocument();
-    expect(localStorage.getItem('token')).toBeNull();
-  });
-
-  test('a valid token reaches the protected view', () => {
-    localStorage.setItem('token', tokenWithExp(Math.floor(Date.now() / 1000) + 3600));
-    render(<Protected />);
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+  test('false for expired, true for valid', () => {
+    expect(isTokenValid(makeToken({ ttlSeconds: -30 }))).toBe(false);
+    expect(isTokenValid(makeToken({ ttlSeconds: 3600 }))).toBe(true);
   });
 });

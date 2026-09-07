@@ -1,0 +1,153 @@
+/* ============================================================================
+   Application shell: desktop sidebar + mobile top bar / drawer.
+   ========================================================================== */
+.shell { display: flex; min-height: 100vh; background: var(--color-bg); }
+
+/* ---------- Sidebar (desktop) ---------- */
+.shell__sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--navy-900);
+  color: #b9c6d8;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+.shell__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  color: #fff;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-base);
+  letter-spacing: var(--tracking-tight);
+}
+.shell__nav { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); flex: 1; }
+.shell__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  color: #a9b8cc;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.shell__link:hover { background: rgba(255, 255, 255, 0.05); color: #fff; text-decoration: none; }
+.shell__link.is-active {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font-weight: var(--weight-semibold);
+}
+.shell__link.is-active::before {
+  content: '';
+  position: absolute;
+  left: -0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 1.15rem;
+  border-radius: 0 2px 2px 0;
+  background: var(--teal-400);
+}
+.shell__link.is-active .shell__link-icon { color: var(--teal-400); }
+.shell__link-icon { color: #7f92ab; flex-shrink: 0; }
+
+.shell__footer {
+  padding: var(--space-3) var(--space-3) var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.shell__user { padding: 0 0.4rem 0.3rem; }
+.shell__user-name {
+  display: flex; align-items: center; gap: 0.4rem;
+  font-size: var(--text-sm); font-weight: var(--weight-semibold); color: #fff;
+}
+.shell__user-role { font-size: var(--text-xs); color: #7f92ab; margin-top: 1px; }
+.shell__demo-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--teal-400);
+  box-shadow: 0 0 0 3px rgba(56, 197, 214, 0.22);
+  flex-shrink: 0;
+}
+.shell__signout {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #a9b8cc;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+.shell__signout:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+
+/* ---------- Content ---------- */
+.shell__main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-x: hidden; }
+.shell__content {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-6) var(--space-10);
+}
+.shell__content--wide { max-width: none; }
+.shell__content--flush { padding: 0; max-width: none; }
+
+/* ---------- Mobile top bar ---------- */
+.shell__topbar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--topbar-height);
+  padding: 0 var(--space-4);
+  background: var(--navy-900);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.shell__topbar .shell__brand { padding: 0; }
+.shell__burger {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  padding: 6px;
+  display: inline-flex;
+}
+
+.shell__drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 26, 51, 0.5);
+  z-index: 45;
+  animation: ui-fade var(--transition-base);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .shell { flex-direction: column; }
+  .shell__sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: min(80vw, 280px);
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform var(--transition-base);
+    box-shadow: var(--shadow-lg);
+  }
+  .shell__sidebar.is-open { transform: none; }
+  .shell__topbar { display: flex; }
+  .shell__content { padding: var(--space-5) var(--space-4) var(--space-8); }
+}

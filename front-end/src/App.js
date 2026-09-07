@@ -1,81 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Header from './components/Header';
-import WelcomePage from './pages/WelcomePage';
-import MapPage from './pages/MapPage';
-import DebtsPage from './pages/DebtsPage';
-import StatsDashboard from './pages/StatsDashboard';
-import MachineLearning from './pages/MachineLearning';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { ToastProvider } from './components/ui';
+import AppShell from './components/AppShell';
+import { isTokenValid, clearInvalidToken } from './api/config';
+
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-import { isTokenValid } from './api/config';
+import OverviewPage from './pages/OverviewPage';
+import MapPage from './pages/MapPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import ForecastPage from './pages/ForecastPage';
+import DebtsPage from './pages/DebtsPage';
+import ProjectPage from './pages/ProjectPage';
 
-function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(() => isTokenValid(localStorage.getItem('token')));
+function RequireAuth({ children }) {
+  const location = useLocation();
+  const token = (() => {
+    try { return localStorage.getItem('token'); } catch (e) { return null; }
+  })();
 
-  // Keep login state in sync with the stored token (covers demo login, logout,
-  // and an expired token that another tab cleared).
-  useEffect(() => {
-    const sync = () => setIsLoggedIn(isTokenValid(localStorage.getItem('token')));
-    sync();
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
+  if (isTokenValid(token)) return children;
+  const expired = Boolean(token);
+  clearInvalidToken();
+  return <Navigate to="/" replace state={{ from: location.pathname, expired }} />;
+}
 
-  // Protected routes require a present, non-expired token. An expired token is
-  // cleared and the visitor is sent to the landing page.
-  const PrivateRoute = ({ children }) => {
-    const token = localStorage.getItem('token');
-    if (isTokenValid(token)) return children;
-    if (token) {
-      localStorage.removeItem('token');
-    }
-    return <Navigate to="/" replace />;
-  };
+const Shell = ({ children, ...props }) => <AppShell {...props}>{children}</AppShell>;
 
+export function AppRoutes() {
   return (
-    <Router>
-      <div className="App">
-        <Header isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<WelcomePage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />} />
-          <Route path="/map" element={<MapPage />} />
+    <div className="App">
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
-          {/* Protected Routes */}
-          <Route
-            path="/stats"
-            element={
-              <PrivateRoute>
-                <StatsDashboard />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/debts"
-            element={
-              <PrivateRoute>
-                <DebtsPage />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/machine"
-            element={
-              <PrivateRoute>
-                <MachineLearning />
-              </PrivateRoute>
-            }
-          />
+        <Route path="/map" element={<Shell flush><MapPage /></Shell>} />
+        <Route path="/project" element={<Shell><ProjectPage /></Shell>} />
 
-          {/* Login Route */}
-          <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} />} />
+        <Route path="/overview" element={<RequireAuth><Shell><OverviewPage /></Shell></RequireAuth>} />
+        <Route path="/analytics" element={<RequireAuth><Shell><AnalyticsPage /></Shell></RequireAuth>} />
+        <Route path="/forecast" element={<RequireAuth><Shell><ForecastPage /></Shell></RequireAuth>} />
+        <Route path="/debts" element={<RequireAuth><Shell><DebtsPage /></Shell></RequireAuth>} />
 
-          {/* Redirect all unknown routes */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </div>
-    </Router>
+        {/* Legacy route aliases */}
+        <Route path="/stats" element={<Navigate to="/analytics" replace />} />
+        <Route path="/machine" element={<Navigate to="/forecast" replace />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <ToastProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </ToastProvider>
+  );
+}

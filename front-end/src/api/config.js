@@ -54,6 +54,15 @@ export function isTokenValid(token) {
   }
 }
 
+/** Remove a stored token (used when it is missing/expired/invalid). */
+export function clearInvalidToken() {
+  try {
+    localStorage.removeItem('token');
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 /**
  * Start a public demo session. No credentials. Resolves to the short-lived
  * demo token or throws with a user-facing message.
