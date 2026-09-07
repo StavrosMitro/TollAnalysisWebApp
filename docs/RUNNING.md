@@ -32,20 +32,15 @@ a known-weak value, or the backend refuses to start.
 
 ### Seeded login accounts
 
-Created by `db/init/02-data.sql`:
+`db/init/02-data.sql` seeds one administrator (`admin@yme.gov.gr`, role `admin`)
+and seven operator accounts (`admin@aodos.gr`, `admin@gefyra.gr`,
+`admin@egnatia.eu`, `admin@kentrikiodos.gr`, `admin@moreas.com.gr`,
+`admin@neaodos.gr`, `admin@olympiaodos.gr` — roles `aodos` … `olympiaodos`).
 
-| Email | Password | Role |
-|-------|----------|------|
-| `admin@yme.gov.gr` | `yme123!` | `admin` |
-| `admin@aodos.gr` | `Aodos123!` | `aodos` |
-| `admin@gefyra.gr` | `Gefyra123!` | `gefyra` |
-| `admin@egnatia.eu` | `Egnatia123!` | `egnatia` |
-| `admin@kentrikiodos.gr` | `Kentriki123!` | `kentrikiodos` |
-| `admin@moreas.com.gr` | `Moreas123!` | `moreas` |
-| `admin@neaodos.gr` | `Neaodos123!` | `neaodos` |
-| `admin@olympiaodos.gr` | `Olympia123!` | `olympiaodos` |
-
-These are sample educational credentials for a demo dataset - not real accounts.
+These are fictional educational accounts for a sample dataset, not real
+credentials. Their passwords are **not published here**; for a no-login tour use
+the **Explore Live Demo** button, which needs no credentials (see *Public demo*
+below).
 
 ### Resetting the database
 
@@ -115,8 +110,12 @@ forecasts; every write / admin / training operation is denied. See
 | `cd back-end && npm test` | Backend **unit** tests (`jest.unit.config.js`). DB, Python and filesystem are mocked. | Node only |
 | `cd back-end && npm run test:unit` | same as `npm test` | Node only |
 | `cd back-end && npm run test:integration` | Spins a **fresh disposable MySQL** (`toll_analysis_test`, own container), runs `testing/integration/*` against the real app, tears the DB down afterwards. Refuses to run unless `NODE_ENV=test`, `DATABASE` ends `_test`, `ALLOW_DESTRUCTIVE_TESTS=true` (the wrapper sets these). | Docker |
-| `cd front-end && CI=true npm test` | Frontend tests | Node only |
+| `cd front-end && CI=true npm test` | Frontend tests (incl. the jsdom visitor-journey e2e) | Node only |
 | `cd front-end && npm run build` | Frontend production build | Node only |
+| `cd front-end && npm run visual-check` | Screenshots every page at 4 viewports and flags overflow / console errors. Writes to `front-end/.visual/` (gitignored). | **A running stack** + a Chromium at `CHROMIUM_PATH` (default `/snap/bin/chromium`) |
 
 `INTEGRATION_ML=true npm run test:integration` also runs the forecast test (needs
 `PYTHON_BIN` pointing at an interpreter with scikit-learn).
+
+`npm run visual-check` expects the app at `http://localhost:9115` — start it with
+`docker compose up -d` from the repo root first (override with `APP_URL`).
