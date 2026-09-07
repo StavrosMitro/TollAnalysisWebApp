@@ -4,6 +4,24 @@ Known compromises carried intentionally, with the reason and the intended fix.
 
 ---
 
+## Dependency security remediation (Milestone F)
+
+The September 2026 focused audit updated `mysql2` to `3.24.3`, removed the
+unused direct `npm` dependency, pinned `jws` to `3.2.3`, pinned `validator` to
+`13.15.35`, scoped Express's matcher to `path-to-regexp@0.1.13`, and updated
+`react-router-dom` to `6.30.6`. Backend authentication, MySQL access and browser
+routing retain their existing APIs.
+
+The remaining backend critical/high results are explicitly classified in
+`DEPLOYMENT.md`: bcrypt's `tar`/node-pre-gyp chain is install-time, and
+Swagger/parser plus lodash transitive findings do not receive attacker-
+controlled input in this application. Frontend critical/high results remain in
+the CRA/Webpack/Jest/Puppeteer toolchain and are not copied into the production
+image. These are accepted with the stated scope and compensating controls, not
+silently treated as fixed.
+
+---
+
 ## PyVis debt-optimization graph (Debt Optimization page)
 
 **What it does now.** `GET /api/get_debts_optimization` returns two HTML documents

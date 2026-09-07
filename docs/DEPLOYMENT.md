@@ -96,32 +96,56 @@ creates, seeds, resets, or overwrites a database.
 The approved before/after PyVis graphs remain generated HTML in a sandboxed
 `srcDoc` iframe (`sandbox="allow-scripts"`, no same-origin access). Each graph
 uses inline generated JavaScript plus pinned `vis-network` from cdnjs and
-Bootstrap assets from jsDelivr. The app's CSP therefore allows only those two
-CDN origins plus `'unsafe-inline'` for script/style; removing either allowance
+Bootstrap assets from jsDelivr. The app's CSP therefore allows those two CDN
+origins, the OpenStreetMap tile host, plus `'unsafe-inline'` for script/style;
+removing either CDN allowance
 breaks the interactive graph. See `TECH_DEBT.md` for the accepted limitation.
 
-## Dependency-audit triage (reviewed September 2026)
+## Dependency-audit triage (Milestone F, reviewed September 2026)
 
-No automatic audit fix was applied. `npm audit --omit=dev` reports 33 backend
-findings (1 critical, 23 high) and 64 frontend findings (3 critical, 32 high).
-The counts overstate deployed exposure because the frontend's build toolchain is
-not copied into the runtime image; only its compiled static assets are served.
+The focused remediation used separate JSON audits for backend production
+dependencies, the complete backend tree, frontend browser/runtime dependencies,
+and frontend build/test tooling. No `npm audit fix --force` was used. Before
+the changes, the backend production audit reported 33 findings (1 critical, 23
+high); the frontend runtime-shaped audit reported 64 findings (3 critical, 32
+high). After the changes, the backend production audit reports 10 findings (1
+critical, 6 high) and the frontend audit reports 63 findings (3 critical, 29
+high). Those totals are not exposure totals: the frontend manifest still uses
+Create React App packages to build the bundle, but the final image contains
+only the compiled frontend assets and the backend production dependencies.
 
-| Package / advisory family | Severity | Deployed reachability | Recommended action |
-| --- | --- | --- | --- |
-| `mysql2` — clear-password auth downgrade and compressed-protocol inflate | high / moderate | **Yes:** the API opens MySQL connections, although the DB is private and provider-controlled. | Upgrade to the latest compatible `mysql2` 3.x, verify TLS/auth settings and run integration tests. |
-| `express` via `path-to-regexp`, `qs`, `body-parser` — route/query/body DoS | high / moderate | **Yes:** Express parses public requests; body limits reduce but do not remove the risk. | Perform a reviewed compatible Express 4.x lockfile update and rerun all API tests. |
-| `jsonwebtoken` → `jws` signature verification | high | **Yes:** JWT verification is on every protected request. | Update the resolved `jws` through a compatible `jsonwebtoken` release, then repeat auth regression tests. |
-| `bcrypt` → `node-pre-gyp` → `tar` | high / critical | The vulnerable archive code is install/build-time; bcrypt password hashing itself is used only by operator login/admin flows. | Plan a reviewed `bcrypt` 6 migration (or consolidate on the existing `bcryptjs`), not an automatic major upgrade. |
-| `express-validator` → `validator` | moderate / high | Potentially reachable only where validation helpers are used; no public user-supplied URL validation path was identified in this review. | Update after the Express work and add route-specific tests. |
-| direct `npm` and its `tar`/`pacote`/`glob` tree | critical / high | Present in the runtime image because it is declared as an app dependency, but not invoked by request handling. | Remove the unnecessary direct `npm` dependency in a dedicated dependency-maintenance change; Node's bundled npm is sufficient for image builds. |
-| `react-router-dom` → `@remix-run/router` open redirects | high | **Yes:** browser-shipped routing code; this app's routes are fixed rather than user-controlled redirect targets. | Upgrade React Router in a focused UI compatibility change and add redirect/path tests. |
-| `react-scripts` / webpack / SVGO / Jest / dev-server chain | critical / high through transitive packages | **No at runtime:** used to create the React bundle and absent from the final Node image. | Replace the unmaintained CRA toolchain in a separately scoped migration; keep CI/build environments patched in the meantime. |
+Intentional direct changes:
 
-The direct, request-path findings (`mysql2`, Express and JWT dependencies) are
-tracked deployment risks, but this review found no exploit path in the current
-public-demo configuration. Address them before treating the portfolio instance
-as a generally exposed production service.
+* `mysql2` `^3.11.3` -> `^3.24.3`, resolving the direct auth-downgrade
+   advisory GHSA-3f6p-5ww8-9rcr and the compressed-protocol advisory.
+* Removed the unused direct `npm` dependency. Its `pacote`, `tar`, `glob`, and
+   `minimatch` tree was never imported by request-path code and is absent from
+   the runtime dependency tree.
+* Added compatible npm overrides for `jws` `3.2.3` and `validator` `13.15.35`.
+   `jws` is used by `jsonwebtoken` request authentication; `validator` is used
+   by `express-validator` and the override stays within the package API.
+* Added a scoped Express override for `path-to-regexp` `0.1.13`, the patched
+   version compatible with the existing Express 4 route matcher.
+* `react-router-dom` `^6.28.0` -> `^6.30.6`, clearing the browser-shipped
+   React Router redirect advisories without changing the major version.
+
+Remaining critical/high findings and disposition:
+
+| Finding / path | Installed / patched | Reachability and disposition |
+| --- | --- | --- |
+| `tar` advisories `1112659`, `1113300`, `1113375`, `1114200`, `1114302`, `1114680`, `1120782`, `1123939`, `1123940`, `1123941`, `1123942`, `1145647` via `bcrypt` -> `@mapbox/node-pre-gyp` -> `tar@6.2.1` | `tar@6.2.1`; patched releases are `7.5.x` | Install/build-time archive extraction only. No request handler imports `tar`; accepted temporarily while avoiding a risky bcrypt major migration. The final image retains bcrypt for operator password hashing, but not an application archive-extraction path. |
+| `@mapbox/node-pre-gyp` advisories via `bcrypt` | `@mapbox/node-pre-gyp@1.0.11`; no compatible direct patch selected | Install-time native-module packaging path, not request-time code. Same bcrypt disposition as above. |
+| GHSA-37ch-88jc-xwx in `express` -> `path-to-regexp@0.1.12` | Resolved to patched `path-to-regexp@0.1.13` through a scoped npm override | Reachable Express route parsing is now on the patched legacy-compatible release; backend unit and integration tests passed after the override. |
+| js-yaml advisories via `swagger-jsdoc` -> `swagger-parser` -> `@apidevtools/json-schema-ref-parser` | `js-yaml@4.1.0`; current advisory fix is outside the selected compatible parser chain | Swagger documents are repository-controlled and generated at startup; no user-supplied YAML reaches this path. Vulnerable function is unreachable from public request handling. |
+| lodash advisories via `express-validator` | `lodash@4.17.21`; patched release is outside this dependency's current range | The affected template/prototype helpers are not called by application validation routes. Validator was updated; lodash remains a separately planned express-validator compatibility update. |
+| minimatch/brace-expansion advisories through dev utilities | `minimatch@3.1.2`, `brace-expansion@1.1.11` | Test/development tooling only (`jest`, `nodemon`, glob helpers); not in the backend production tree after removing `npm`. |
+
+The browser-shipped React Router path has no remaining critical/high finding in
+the final runtime audit. The remaining frontend critical/high findings belong
+to CRA/Webpack/SVGO/PostCSS/Jest/Puppeteer build or test chains. They are absent
+from the final runtime image and are not emitted into the browser bundle. A
+compatible fix would require the explicitly out-of-scope CRA migration or a
+separate reviewed toolchain update.
 
 ## Provider choice, checked September 2026
 
