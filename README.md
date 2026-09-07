@@ -161,8 +161,8 @@ The academic foundation was developed by the NTUA ECE Software Engineering team.
 
 | Contributor | Verified contribution |
 | --- | --- |
-| Dimitris Thivaios, Dimitris Liakis, Vassilis Anastasiadis, and Stavros Mitropoulos | Original academic application and engineering foundation as a team project with contribution in front-end, back-end, cli-client and documentaation|
-| Stavros Mitropoulos | Original REST API/backend development, relational database design, documentation, and API functional testing |
+| Dimitris Thivaios, Dimitris Liakis, Vassilis Anastasiadis | Original academic application and engineering foundation as a team project with contribution in front-end, back-end, cli-client and documentaation|
+| Stavros Mitropoulos | Original academic application with major contribution in REST API/backend development, relational database design, documentation, and API functional testing |
 | Stavros Mitropoulos — later `portfolio-demo` line | Product direction and portfolio positioning; frontend/transportation identity; public-demo UX; authentication/authorization hardening; Docker/deployment architecture; reproducible database setup; ML integrity and artifact serving; test expansion; security/dependency hardening; documentation and deployment preparation |
 
 The original application was a group effort; later portfolio-line work listed above is Stavros's own. The display aliases in this README and the application are fictional names layered over stable internal codes, not new legal entities.
