@@ -88,7 +88,11 @@ for (const vp of VIEWPORTS) {
     page.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message.slice(0, 180)));
     page.on('requestfailed', (r) => {
       const u = r.url();
-      if (!/google|gstatic|favicon|analytics\./.test(u)) failed.push(`${r.failure().errorText} ${u.slice(0, 90)}`);
+      // Puppeteer occasionally emits requestfailed after a frame has been
+      // disposed and reports no failure object. Preserve the failed request in
+      // the report instead of crashing the whole visual suite.
+      const failure = r.failure();
+      if (!/google|gstatic|favicon|analytics\./.test(u)) failed.push(`${failure?.errorText || 'request failed'} ${u.slice(0, 90)}`);
     });
     if (p.auth) {
       // Only the top document — never a sandboxed child frame (e.g. the pyvis

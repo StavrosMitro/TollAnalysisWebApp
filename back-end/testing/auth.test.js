@@ -69,6 +69,40 @@ describe('POST /api/login', () => {
     });
 });
 
+describe('public deployment mode', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        process.env.PUBLIC_DEMO_MODE = 'true';
+        process.env.DISABLE_DESTRUCTIVE_OPS = 'true';
+    });
+    afterEach(() => {
+        delete process.env.PUBLIC_DEMO_MODE;
+        delete process.env.DISABLE_DESTRUCTIVE_OPS;
+    });
+
+    it('blocks normal credentials before looking up any seeded user', async () => {
+        const res = await request(app)
+            .post('/api/login')
+            .send({ user_email: 'admin@yme.gov.gr', user_password: 'yme123!' });
+        expect(res.status).toBe(403);
+        expect(res.body.error.code).toBe('PUBLIC_DEMO_MODE');
+        expect(dbMock.getUser).not.toHaveBeenCalled();
+    });
+
+    it('still permits the dedicated no-input read-only demo login', async () => {
+        const res = await request(app).post('/api/auth/demo-login').send({ user_role: 'admin' });
+        expect(res.status).toBe(200);
+        expect(decode(res.body.token).user_role).toBe('demo');
+    });
+
+    it('reports the public flag without exposing any secret configuration', async () => {
+        const res = await request(app).get('/api/public-config');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ publicDemoMode: true });
+        expect(JSON.stringify(res.body)).not.toMatch(/secret|password|token/i);
+    });
+});
+
 describe('POST /api/auth/demo-login', () => {
     it('issues a demo-scoped token with no input', async () => {
         const res = await request(app).post('/api/auth/demo-login');

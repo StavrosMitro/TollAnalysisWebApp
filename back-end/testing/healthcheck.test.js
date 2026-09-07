@@ -33,6 +33,7 @@ describe('GET /healthz (public)', () => {
         const res = await request(app).get('/healthz');
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({ status: 'ok', database: 'up' });
+        expect(JSON.stringify(res.body)).not.toMatch(/password|secret|token|host|path|exception|stack/i);
     });
 
     it('503 when the database is unavailable', async () => {
@@ -40,7 +41,17 @@ describe('GET /healthz (public)', () => {
         const res = await request(app).get('/healthz');
         expect(res.status).toBe(503);
         expect(res.body).toMatchObject({ status: 'unavailable', database: 'down' });
-        expect(JSON.stringify(res.body)).not.toMatch(/ECONNREFUSED|stack|password/i);
+        expect(JSON.stringify(res.body)).not.toMatch(/ECONNREFUSED|stack|password|secret|token|host|path|exception/i);
+    });
+});
+
+describe('GET /livez (public)', () => {
+    it('is process-only and never exposes infrastructure details', async () => {
+        const res = await request(app).get('/livez');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ status: 'ok' });
+        expect(JSON.stringify(res.body)).not.toMatch(/password|secret|token|mysql|host|path|exception|stack/i);
+        expect(dbMock.ping).not.toHaveBeenCalled();
     });
 });
 

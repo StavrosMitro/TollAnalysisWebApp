@@ -91,7 +91,11 @@ describe('GET /figures (with format)', () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toHaveProperty('error');
-    expect(response.body.error).toBe('File read error');
+    expect(response.body.error).toEqual({
+      code: 'FIGURES_UNAVAILABLE',
+      message: 'The optimization figures are unavailable.',
+    });
+    expect(JSON.stringify(response.body)).not.toMatch(/File read error|stack|path/i);
   });
 
   test('should return 200 and JSON data if format=json', async () => {

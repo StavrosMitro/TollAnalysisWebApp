@@ -129,6 +129,20 @@ describe('DebtsPage', () => {
     expect(screen.queryByRole('button', { name: /cancel debts|reset|optimi[sz]e|run/i })).not.toBeInTheDocument();
     expect(screen.getByText(/this page is read-only/i)).toBeInTheDocument();
   });
+
+  test('keeps the approved PyVis frame script-enabled but cross-origin sandboxed', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true, status: 200,
+      json: async () => ({
+        html: { html1: '<html><body><script>window.graph=true</script></body></html>', html2: '<html><body>after</body></html>' },
+        csv: 'Debtor,Creditor,Amount\nNO,AM,120.50',
+      }),
+    });
+    renderWithProviders(<DebtsPage />);
+    const frame = await screen.findByTitle(/optimized transfers network/i);
+    expect(frame).toHaveAttribute('sandbox', 'allow-scripts');
+    expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin');
+  });
 });
 
 /* ---------------- Project ---------------- */

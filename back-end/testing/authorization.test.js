@@ -153,6 +153,23 @@ describe('Destructive / privileged operations', () => {
     });
 });
 
+describe('PUBLIC_DEMO_MODE regression', () => {
+    beforeAll(() => {
+        process.env.PUBLIC_DEMO_MODE = 'true';
+        process.env.DISABLE_DESTRUCTIVE_OPS = 'true';
+    });
+    afterAll(() => {
+        delete process.env.PUBLIC_DEMO_MODE;
+        delete process.env.DISABLE_DESTRUCTIVE_OPS;
+    });
+
+    it('blocks a valid administrator token from a destructive endpoint', async () => {
+        const res = await call(RESET, tokens.admin());
+        expect(res.status).toBe(403);
+        expect(res.body.error.code).toBe('DEMO_MODE_RESTRICTION');
+    });
+});
+
 describe('company-data scope (ENFORCE_COMPANY_SCOPE)', () => {
     const neaodos = tokens.company('neaodos'); // owns operator NO
     const aodos = tokens.company('aodos'); // ambiguous -> unmapped
