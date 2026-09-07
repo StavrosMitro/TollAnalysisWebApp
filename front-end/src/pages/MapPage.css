@@ -1,130 +1,136 @@
-/* Leaflet Base Styles */
-@import "leaflet/dist/leaflet.css";
-@import "leaflet.markercluster/dist/MarkerCluster.css";
-@import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+.mapx { display: flex; flex-direction: column; height: calc(100vh - 0px); }
+/* inside the shell the topbar (mobile) reduces available height */
+@media (max-width: 900px) { .mapx { height: calc(100vh - var(--topbar-height)); } }
 
-/* Filters */
-.filters-container {
+.mapx__toolbar {
   display: flex;
-  gap: 20px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   flex-wrap: wrap;
-  margin: 20px 15px;
-  padding: 30px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
+.mapx__toolbar-title { display: flex; gap: var(--space-3); align-items: center; color: var(--color-primary); }
+.mapx__toolbar-title h1 { font-size: var(--text-xl); font-weight: var(--weight-bold); }
+.mapx__toolbar-title p { font-size: var(--text-xs); color: var(--color-text-subtle); }
+.mapx__filters { display: flex; gap: var(--space-3); }
+.mapx__filters .ui-field { min-width: 170px; }
 
-.filter-group {
-  flex: 1 1 300px;
-  min-width: 280px;
-}
+.mapx__stage { position: relative; flex: 1; min-height: 320px; }
+.mapx__canvas { position: absolute; inset: 0; background: var(--slate-100); }
+.mapx__canvas:focus-visible { outline: 3px solid var(--color-accent); outline-offset: -3px; }
 
-.filter-label {
+.mapx__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-weight: 600;
-  color: #2c3e50;
-  font-size: 0.95rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  background: rgba(247, 249, 251, 0.9);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
+.mapx__overlay--soft { background: transparent; pointer-events: none; }
+.mapx__overlay--soft .ui-state { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); pointer-events: auto; }
 
-.filter-select,
-.filter-input {
-  padding: 10px 12px;
-  border: 2px solid #dee2e6;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  background-color: white;
+/* Marker: on-brand circular dot, no external image */
+.toll-marker span,
+.toll-marker--legend {
+  display: block;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--teal-500);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(7, 26, 51, 0.5);
 }
+.toll-marker--legend { display: inline-block; vertical-align: middle; }
 
-.filter-select:focus,
-.filter-input:focus {
-  border-color: #4dabf7;
-  box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.25);
-  outline: none;
-}
-
-/* Popup Styles */
-.popup-content {
-  position: relative;
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  min-width: 250px;
-}
-
-.popup-close {
+.mapx__legend {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: #6c757d;
-  padding: 0 5px;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 500;
+  max-width: 340px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 0.5rem 0.7rem;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.85rem;
+}
+.mapx__legend-op { display: inline-flex; align-items: center; gap: 0.35rem; }
+.mapx__legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+.mapx__legend-cluster {
+  display: inline-grid; place-items: center;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(18, 165, 184, 0.5);
+  color: #04252b;
+  font-weight: var(--weight-bold);
+  font-size: 10px;
 }
 
-.popup-close:hover {
-  color: #495057;
+/* Selected-station panel */
+.mapx__detail {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 600;
+  width: 300px;
+  max-width: calc(100vw - 2 * var(--space-3));
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-4);
 }
-
-/* Messages */
-.loading-message {
-  text-align: center;
-  padding: 20px;
-  color: #4a5568;
-  font-size: 1.1rem;
+.mapx__detail h3 { font-size: var(--text-base); margin: var(--space-2) 0 var(--space-3); }
+.mapx__detail-close {
+  position: absolute; top: 8px; right: 8px;
+  background: transparent; border: 0; color: var(--color-text-subtle);
+  padding: 4px; line-height: 0; border-radius: var(--radius-sm);
 }
+.mapx__detail-close:hover { background: var(--color-surface-alt); color: var(--color-text); }
+.mapx__detail-list { margin: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.mapx__detail-list dt { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-subtle); }
+.mapx__detail-list dd { margin: 2px 0 0; font-size: var(--text-sm); color: var(--color-text); }
+.mapx__prices { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+.mapx__prices span { font-size: var(--text-xs); color: var(--color-text-muted); }
 
-.error-message {
-  color: #dc3545;
-  padding: 15px;
-  margin: 15px;
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 6px;
-  font-size: 0.95rem;
+/* Leaflet cluster restyle */
+.marker-cluster {
+  background: rgba(18, 165, 184, 0.25) !important;
 }
-
-/* Map Container */
-.map-container {
-  height: 700px;
-  width: calc(100% - 30px);
-  margin: 0 15px 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.marker-cluster div {
+  background: var(--teal-500) !important;
+  color: #04252b !important;
+  font-weight: var(--weight-bold);
 }
+.leaflet-popup-content-wrapper { border-radius: var(--radius-md); }
+.leaflet-container a.leaflet-popup-close-button { color: var(--color-text-subtle); }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .filters-container {
-    flex-direction: column;
-    gap: 15px;
-    margin: 15px 10px;
+@media (max-width: 720px) {
+  .mapx__toolbar { align-items: stretch; }
+  .mapx__filters { width: 100%; }
+  .mapx__filters .ui-field { flex: 1; min-width: 0; }
+  .mapx__detail {
+    top: auto; right: var(--space-2); left: var(--space-2);
+    bottom: var(--space-2); width: auto;
   }
-
-  .filter-group {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .map-container {
-    height: 500px;
-    margin: 0 10px 15px;
-  }
-
-  .filter-select,
-  .filter-input {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .map-container {
-    height: 400px;
-  }
+  .mapx__legend { display: none; }
 }

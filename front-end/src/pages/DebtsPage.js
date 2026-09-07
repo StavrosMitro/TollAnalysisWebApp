@@ -1,416 +1,158 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../api/config';
+import React, { useEffect, useMemo, useState } from 'react';
+import { apiUrl, authHeaders } from '../api/config';
+import {
+  PageHeader, StatCard, Icon, LoadingState, EmptyState, ErrorState,
+} from '../components/ui';
+import { operatorName, operatorColor } from '../lib/operators';
+import './DebtsPage.css';
 
-// Mapping of codes to Greek labels
-const namesMapping = {
-  AM: 'Αυτοκινητόδρομος Αιγαίου',
-  EG: 'Εγνατία Οδός',
-  KO: 'Κεντρική Οδός',
-  MO: 'Μορέας',
-  NAO: 'Αττική Οδός',
-  NO: 'Νέα Οδός',
-  OO: 'Ολυμπία Οδός',
-  GE: 'Γέφυρα',
-};
+const money = (n) => `€${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n) || 0)}`;
 
-// DebtSection Component
-const DebtSection = ({ title, html, sectionKey }) => {
-  const handleDownload = () => {
-    const blob = new Blob([html], { type: 'text/html' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${sectionKey}_debts.html`;
-    document.body.appendChild(link); // Required for Firefox
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href); // Clean up the URL object
-  };
+/**
+ * The pyvis export references files that were never deployed
+ * (`lib/bindings/utils.js`, a local `vis.js`) and links a mis-pathed stylesheet
+ * that resolves to an HTML 404 page. vis-network from the CDN renders the graph
+ * on a canvas without any of them, so we strip the dead references. The graph
+ * data and layout options are left untouched apart from one vis-network key fix.
+ */
+function cleanGraphHtml(html) {
+  if (!html) return html;
+  return html
+    // dead local <script src> references
+    .replace(/<script[^>]*src=["'](?:lib\/bindings\/utils\.js|\.\.\/node_modules\/[^"']*)["'][^>]*>\s*<\/script>/gi, '')
+    // mis-pathed vis-network stylesheet (returns an HTML 404 page)
+    .replace(/<link[^>]*vis-network[^>]*>/gi, '')
+    // vis-network expects `edges.font`, not `edges.label` as an object
+    .replace('"smooth": {"type": "dynamic"}, "label": {"font": {"size": 18, "color": "white"}}}', '"smooth": {"type": "dynamic"}, "font": {"size": 18, "color": "white"}}');
+}
 
-  return (
-    <div className="p-6 border rounded-lg shadow-sm" style={{ flex: '1', margin: '0 8px' }}>
-      <h2 className="text-2xl font-bold mb-4">{title}</h2>
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={handleDownload}
-          className="px-4 py-2 bg-green-500 text-white rounded shadow hover:bg-green-600 transition-colors"
-        >
-          Download HTML
-        </button>
-      </div>
-      <div className="mt-4">
-        <iframe
-          srcDoc={html}
-          style={{
-            width: '600px',
-            height: '620px',
-            border: '1px solid lightgray',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '8px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          }}
-          title={`${title} View`}
-        />
-      </div>
-    </div>
-  );
-};
-
-// CsvSection Component with Download CSV Button and Greek Translations
-const CsvSection = ({ title, csvData }) => {
-  if (!csvData) {
-    return <p>Δεν υπάρχουν διαθέσιμα δεδομένα CSV.</p>;
-  }
-
-  const rows = csvData
-    .split('\n')
-    .filter((row) => row.trim() !== '') // Remove empty rows
-    .map((row) => row.split(','));
-
-  if (rows.length === 0) {
-    return <p>Δεν υπάρχουν διαθέσιμα δεδομένα CSV.</p>;
-  }
-
-  const filteredRows = rows.filter((row, rowIndex) => {
-    if (rowIndex === 0) return true;
-    return row.some((cell) => cell.trim() !== '0');
-  });
-
-  if (filteredRows.length <= 1) {
-    return <p>Δεν υπάρχουν δεδομένα για εμφάνιση.</p>;
-  }
-
-  // Function to handle CSV download with Greek headers
-  const handleDownload = () => {
-    // Replace English headers with Greek headers
-    const greekHeaders = ['Οφειλέτης', 'Δανειστής', 'Ποσό (€)'];
-    const dataRows = filteredRows.slice(1).map((row) => {
-      const [debtor, creditor, amount] = row;
-      const translatedDebtor = namesMapping[debtor.trim()] || debtor;
-      const translatedCreditor = namesMapping[creditor.trim()] || creditor;
-      return [translatedDebtor, translatedCreditor, amount];
-    });
-
-    const csvContent = [greekHeaders.join(','), ...dataRows.map(row => row.join(','))].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    // Generate a safe filename by removing special characters and spaces
-    const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    link.download = `${safeTitle}.csv`;
-    document.body.appendChild(link); // Required for Firefox
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url); // Clean up the URL object
-  };
-
-  return (
-    <div className="p-6 border rounded-lg shadow-sm" style={{ marginTop: '2rem' }}>
-      <h2 className="text-2xl font-bold mb-4">{title}</h2>
-      {/* Download CSV Button */}
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={handleDownload}
-          className="px-4 py-2 bg-green-500 text-white rounded shadow hover:bg-green-600 transition-colors"
-        >
-          Κατέβασμα CSV
-        </button>
-      </div>
-      {/* CSV Data Table */}
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              {/* Replace English headers with Greek headers */}
-              <th
-                style={{
-                  border: '1px solid #ddd',
-                  padding: '8px',
-                  backgroundColor: '#f2f2f2',
-                  
-                }}
-              >
-                Οφειλέτης
-              </th>
-              <th
-                style={{
-                  border: '1px solid #ddd',
-                  padding: '8px',
-                  backgroundColor: '#f2f2f2',
-                }}
-              >
-                Δανειστής
-              </th>
-              <th
-                style={{
-                  border: '1px solid #ddd',
-                  padding: '8px',
-                  backgroundColor: '#f2f2f2',
-                }}
-              >
-                Ποσό (€)
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRows.slice(1).map((row, rowIndex) => {
-              const [debtor, creditor, amount] = row;
-              const translatedDebtor = namesMapping[debtor.trim()] || debtor;
-              const translatedCreditor = namesMapping[creditor.trim()] || creditor;
-              return (
-                <tr key={rowIndex}>
-                  <td
-                    style={{
-                      border: '1px solid #ddd',
-                      padding: '8px',
-                    }}
-                  >
-                    {translatedDebtor}
-                  </td>
-                  <td
-                    style={{
-                      border: '1px solid #ddd',
-                      padding: '8px',
-                    }}
-                  >
-                    {translatedCreditor}
-                  </td>
-                  <td
-                    style={{
-                      border: '1px solid #ddd',
-                      padding: '8px',
-                    }}
-                  >
-                    {amount.trim() === '0' ? '' : amount}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-// DebtsPage Component
-const DebtsPage = () => {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false); // New state for admin check
-
-  const navigate = useNavigate(); // Hook for navigation
+export default function DebtsPage() {
+  const [state, setState] = useState({ status: 'loading', data: null, error: '' });
+  const [view, setView] = useState('after'); // before | after
 
   useEffect(() => {
-    checkTokenAndFetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(apiUrl('/get_debts_optimization'), { headers: authHeaders() });
+        if (res.status === 204) { if (alive) setState({ status: 'empty', data: null, error: '' }); return; }
+        if (res.status === 401) { if (alive) setState({ status: 'error', data: null, error: 'Your session expired. Please restart the demo.' }); return; }
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (alive) setState({ status: 'ready', data, error: '' });
+      } catch (e) {
+        if (alive) setState({ status: 'error', data: null, error: 'Could not load the debt-optimization result.' });
+      }
+    })();
+    return () => { alive = false; };
   }, []);
 
-  const checkTokenAndFetchData = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      // No token found, redirect to login
-      navigate('/login');
-      return;
-    }
+  const { status, data, error } = state;
 
-    try {
-      // Decode the token to get payload
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const currentTime = Date.now() / 1000;
+  const settlements = useMemo(() => {
+    if (!data || !data.csv) return [];
+    return data.csv.trim().split('\n').slice(1)
+      .map((r) => r.split(','))
+      .filter((r) => r.length >= 3 && parseFloat(r[2]) > 0)
+      .map((r) => ({ debtor: r[0].trim(), creditor: r[1].trim(), amount: parseFloat(r[2]) }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [data]);
 
-      if (payload.exp && payload.exp < currentTime) {
-        // Token expired
-        alert('Η συνεδρία σας έχει λήξει. Παρακαλώ συνδεθείτε ξανά.');
-        handleLogout();
-        return;
-      }
-
-      // Set isAdmin if user_email is admin@yme.gov.gr
-      if (payload.user_email === 'admin@yme.gov.gr') {
-        setIsAdmin(true);
-      }
-
-      // Fetch debt data for all users
-      fetchDebtData();
-    } catch (err) {
-      console.error('Invalid token:', err);
-      alert('Μη έγκυρο token. Παρακαλώ συνδεθείτε ξανά.');
-      handleLogout();
-    }
-  };
-
-  // Function to handle logout (remove token and redirect to login)
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
-  };
-
-  const fetchDebtData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Δεν βρέθηκε το token. Παρακαλώ συνδεθείτε ξανά.');
-      }
-
-      const response = await fetch(apiUrl('/get_debts_optimization'), {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-observatory-auth': token,
-        },
-      });
-
-      if (response.status === 200) {
-        const result = await response.json();
-        setData(result);
-      } else if (response.status === 204) {
-        setError('Δεν επιστράφηκαν δεδομένα για τα κριτήρια που δώσατε.');
-      } else {
-        handleSpecificError(response.status);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSpecificError = (statusCode) => {
-    let message = '';
-    switch (statusCode) {
-      case 400:
-        message = 'Άκυρο αίτημα. Παρακαλώ ελέγξτε τις εισροές σας.';
-        break;
-      case 401:
-        message = 'Μη εξουσιοδοτημένο αίτημα. Παρακαλώ συνδεθείτε ξανά.';
-        handleLogout();
-        break;
-      case 403:
-        message = 'Απαγορεύεται η πρόσβαση. Δεν έχετε τα απαραίτητα δικαιώματα.';
-        break;
-      case 404:
-        message = 'Ο ζητούμενος πόρος δεν βρέθηκε.';
-        break;
-      case 500:
-        message = 'Προέκυψε σφάλμα στον διακομιστή. Παρακαλώ δοκιμάστε ξανά αργότερα.';
-        break;
-      default:
-        message = `Προέκυψε μη αναμενόμενο σφάλμα. Κωδικός κατάστασης: ${statusCode}`;
-        break;
-    }
-    throw new Error(message);
-  };
-
-  const handleCancelDebts = async () => {
-    setIsProcessing(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Δεν βρέθηκε το token. Παρακαλώ συνδεθείτε ξανά.');
-      }
-
-      const response = await fetch(apiUrl('/cancel_debts'), {
-        method: 'PATCH', // Changed from 'POST' to 'PATCH'
-        headers: {
-          'Content-Type': 'application/json',
-          'x-observatory-auth': token,
-        },
-      });
-
-      if (response.status === 200) {
-        await response.json();
-        alert('Η ακύρωση ολοκληρώθηκε επιτυχώς.');
-        fetchDebtData();
-      } else if (response.status === 204) {
-        alert('Δεν υπάρχουν διαθέσιμα δεδομένα προς ακύρωση.');
-      } else {
-        handleSpecificError(response.status);
-      }
-    } catch (err) {
-      console.error(err);
-      alert(`Σφάλμα: ${err.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
-        <p>Φόρτωση...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem',
-          color: 'red',
-        }}
-      >
-        <p>Σφάλμα: {error}</p>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return null;
-  }
+  const totalToTransfer = settlements.reduce((s, r) => s + r.amount, 0);
+  const html = data && data.html;
+  const png = data && data.figures;
+  const hasGraphs = html && (html.html1 || html.html2);
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
-      <h1
-        style={{
-          fontSize: '2rem',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          marginBottom: '2rem',
-        }}
-      >
-        Οφειλές
-      </h1>
+    <>
+      <PageHeader
+        title="Debt Optimization"
+        subtitle="Netting the obligations that build up when an e-pass is used across operators."
+      />
 
-      {/* === HTML and CSV Sections (Visible to All Users) === */}
-      <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-        <DebtSection title="Αρχικές Οφειλές" html={data.html.html1} sectionKey="initial" />
-        <DebtSection title="Τελικές Οφειλές" html={data.html.html2} sectionKey="final" />
-      </div>
+      <p className="dbx-intro">
+        Every passage through a toll run by an operator other than the one that issued the e-pass
+        creates a debt from the issuer to the collector. Over a period this becomes a web of pairwise
+        debts. A minimum-cash-flow algorithm reduces it to the fewest transfers that leave every
+        operator square. The result below is <strong>precomputed from the sample dataset — this page
+        is read-only.</strong>
+      </p>
 
-      <CsvSection title="Δεδομένα οφειλών" csvData={data.csv} />
+      {status === 'loading' && <LoadingState label="Loading optimization result…" />}
+      {status === 'error' && <ErrorState message={error} onRetry={() => window.location.reload()} />}
+      {status === 'empty' && <EmptyState icon="network" title="No result available" message="The optimization figures have not been generated for this dataset." />}
 
-      {/* === Cancel Debts Section (Visible Only to Admin) === */}
-      {isAdmin && (
-        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-          <button
-            onClick={handleCancelDebts}
-            className="px-6 py-3 bg-blue-500 text-white rounded shadow hover:bg-blue-600 transition-colors"
-            disabled={isProcessing}
-          >
-            {isProcessing ? 'Επεξεργασία...' : 'Ακύρωση Οφειλών'}
-          </button>
-        </div>
+      {status === 'ready' && (
+        <>
+          <div className="dbx-summary">
+            <StatCard label="Settlement transfers" value={settlements.length} hint="After netting" />
+            <StatCard label="Total to transfer" value={money(totalToTransfer)} hint="Sum of net obligations" />
+            <StatCard label="Operators involved" value={new Set(settlements.flatMap((s) => [s.debtor, s.creditor])).size} />
+          </div>
+
+          {/* Interactive network graph */}
+          <section className="ui-section dbx-graph">
+            <div className="dbx-graph__head">
+              <h2>Obligation network</h2>
+              {hasGraphs && (
+                <div className="dbx-toggle" role="group" aria-label="Graph state">
+                  <button type="button" aria-pressed={view === 'before'} className={view === 'before' ? 'is-active' : ''} onClick={() => setView('before')}>
+                    Before
+                  </button>
+                  <button type="button" aria-pressed={view === 'after'} className={view === 'after' ? 'is-active' : ''} onClick={() => setView('after')}>
+                    After optimization
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {hasGraphs ? (
+              <div className="dbx-frame-wrap">
+                <iframe
+                  key={view}
+                  title={view === 'before' ? 'Initial obligations network (interactive)' : 'Optimized transfers network (interactive)'}
+                  srcDoc={cleanGraphHtml(view === 'before' ? html.html1 : html.html2)}
+                  className="dbx-frame"
+                  sandbox="allow-scripts"
+                  loading="lazy"
+                />
+                <p className="dbx-frame-hint">
+                  <Icon name="info" size={12} /> Drag nodes, scroll to zoom. Edge labels are the amount owed (€).
+                </p>
+              </div>
+            ) : png && (png.figure1 || png.figure2) ? (
+              <img className="dbx-img" src={png.figure2 || png.figure1} alt="Optimized inter-operator transfer network" />
+            ) : (
+              <EmptyState title="Graph unavailable" message="The network visualization was not generated." />
+            )}
+          </section>
+
+          {/* Settlement instructions */}
+          <section className="ui-section">
+            <h2>Settlement instructions</h2>
+            {settlements.length === 0 ? (
+              <EmptyState title="Already balanced" message="No transfers are required for this dataset." />
+            ) : (
+              <div className="scroll-x dbx-tablewrap">
+                <table className="ui-table dbx-table">
+                  <thead><tr><th>Pays</th><th aria-hidden="true"></th><th>Receives</th><th className="num">Amount</th></tr></thead>
+                  <tbody>
+                    {settlements.map((s, i) => (
+                      <tr key={i}>
+                        <td><span className="dbx-dot" style={{ background: operatorColor(s.debtor) }} />{operatorName(s.debtor)}</td>
+                        <td className="dbx-arrow"><Icon name="arrow-right" size={15} /></td>
+                        <td><span className="dbx-dot" style={{ background: operatorColor(s.creditor) }} />{operatorName(s.creditor)}</td>
+                        <td className="num">{money(s.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot><tr><td colSpan="3">Total</td><td className="num">{money(totalToTransfer)}</td></tr></tfoot>
+                </table>
+              </div>
+            )}
+          </section>
+        </>
       )}
-    </div>
+    </>
   );
-};
-
-export default DebtsPage;
+}
