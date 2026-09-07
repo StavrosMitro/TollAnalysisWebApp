@@ -1,31 +1,168 @@
-.login-page {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: url('../assets/tollll.webp') no-repeat center center;
-    background-size: cover;
-    height: 88vh; /* Adjust height if necessary */
+/* ============================================================================
+   Login — desktop split screen (visual ~56% / sign-in ~44%)
+   ========================================================================== */
+.lgx {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 880px) {
+  .lgx { grid-template-columns: 56fr 44fr; }
+}
+
+/* ---------- Visual panel ---------- */
+.lgx__visual {
+  position: relative;
+  overflow: hidden;
+  background: var(--navy-900);
+  color: #fff;
+  display: flex;
+}
+.lgx__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lgx__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7, 26, 51, 0.74) 0%, rgba(7, 26, 51, 0.9) 100%);
+}
+
+.lgx__visual-inner {
+  position: relative;
+  z-index: 1;
+  margin: auto;
+  width: 100%;
+  max-width: 460px;
+  padding: var(--space-10) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.lgx__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+  color: #fff;
+}
+.lgx__brand:hover { text-decoration: none; }
+.lgx__visual-line {
+  font-size: var(--text-base);
+  line-height: var(--leading-snug);
+  color: rgba(255, 255, 255, 0.86);
+  max-width: 42ch;
+}
+.lgx__facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.lgx__facts li {
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.78);
+  padding-left: 1.1rem;
+  position: relative;
+}
+.lgx__facts li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal-400);
+}
+.lgx__shot { margin-top: var(--space-2); }
+.lgx__shot img { display: block; }
+
+/* ---------- Sign-in panel ---------- */
+.lgx__panel {
+  display: flex;
+  background: var(--color-surface);
+}
+.lgx__panel-inner {
+  margin: auto;
+  width: 100%;
+  max-width: 380px;
+  padding: var(--space-8) var(--space-6);
+}
+.lgx__panel-brand {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--weight-bold);
+  color: var(--navy-800);
+  margin-bottom: var(--space-5);
+}
+.lgx__panel-brand:hover { text-decoration: none; }
+
+.lgx__title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+}
+.lgx__sub {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+}
+.lgx__alert { margin-top: var(--space-4); }
+.lgx__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.lgx__demo {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+.lgx__demo-head h2 {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.lgx__demo-head p {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: var(--space-1) 0 var(--space-3);
+}
+
+.lgx__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 879px) {
+  .lgx__visual { min-height: 168px; max-height: 208px; }
+  .lgx__visual-inner {
+    padding: var(--space-5) var(--space-5);
+    gap: var(--space-3);
+    max-width: none;
   }
-  
-  .login-form {
-    display: flex;
-    flex-direction: column;
-    width: 300px;
-  }
-  
-  .login-form input {
-    margin: 10px 0;
-    padding: 10px;
-    font-size: 16px;
-  }
-  
-  .login-button {
-    padding: 10px;
-    font-size: 16px;
-    cursor: pointer;
-  }
-  .login-page h2 {
-    color: #ffffff; /* Replace with your desired color */
-    text-align: center; /* Optional: centers the text */
-    font-size: 24px; /* Optional: adjust size */
+  .lgx__visual-line,
+  .lgx__facts,
+  .lgx__shot { display: none; }
+  .lgx__brand { font-size: var(--text-base); }
+}
+
+@media (max-width: 520px) {
+  .lgx__panel-inner { padding: var(--space-6) var(--space-4); }
 }

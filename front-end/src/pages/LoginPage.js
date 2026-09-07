@@ -1,133 +1,159 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import "./LoginPage.css"; // Optional styling
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { apiUrl } from "../api/config";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import './LoginPage.css';
+import { apiUrl, requestDemoSession } from '../api/config';
+import { Icon, Button, Field, Alert, BrandMark, useToast } from '../components/ui';
+import BrowserFrame from '../components/BrowserFrame';
+import shotMap from '../assets/shot-map.webp';
+import motorway from '../assets/motorway-egnatia-1600.webp';
+import motorwaySm from '../assets/motorway-egnatia-800.webp';
 
-function LoginPage({ setIsLoggedIn }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false); // Loading state
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const FACTS = ['8 toll operators', '253 toll stations', 'Analytics · forecasting · debt netting'];
+
+export default function LoginPage() {
   const navigate = useNavigate();
+  const toast = useToast();
 
-  // Helper function for client-side validation
-  const validateForm = () => {
-    if (!email) {
-      toast.error("Please enter your email.");
-      return false;
-    }
-    // Simple email regex for validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email.");
-      return false;
-    }
-    if (!password) {
-      toast.error("Please enter your password.");
-      return false;
-    }
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters long.");
-      return false;
-    }
-    return true;
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+
+  const validate = () => {
+    const e = {};
+    if (!email) e.email = 'Enter your email.';
+    else if (!emailRe.test(email)) e.email = 'Enter a valid email address.';
+    if (!password) e.password = 'Enter your password.';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) return; // Perform client-side validation
-
-    setLoading(true); // Start loading
+  const submit = async (ev) => {
+    ev.preventDefault();
+    setFormError('');
+    if (!validate() || loading) return;
+    setLoading(true);
     try {
-      // Make a POST request to the /api/login endpoint
-      const response = await fetch(apiUrl("/login"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_email: email,
-          user_password: password,
-        }),
+      const res = await fetch(apiUrl('/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_email: email, user_password: password }),
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Store the token securely
-        localStorage.setItem("token", data.token);
-
-        // Update the parent state (if you’re using a parent App component)
-        setIsLoggedIn(true);
-
-        toast.success("Login successful!");
-        // Redirect to a protected page (e.g., home/dashboard)
-        navigate("/");
-      } else {
-        // Handle specific server-side errors
-        switch (response.status) {
-          case 400:
-            toast.error(data.error || "Invalid request. Please try again.");
-            break;
-          case 401:
-            toast.error(data.error || "Unauthorized access. Check your credentials.");
-            break;
-          case 403:
-            toast.error(data.error || "You do not have permission to access this section.");
-            break;
-          case 404:
-            toast.error(data.error || "User not found.");
-            break;
-          case 500:
-            toast.error(data.error || "Server error. Please try again later.");
-            break;
-          default:
-            toast.error(data.error || "An error occurred during login.");
-        }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.token) {
+        localStorage.setItem('token', data.token);
+        toast.success('Signed in.');
+        navigate('/overview');
+        return;
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("An error occurred while logging in. Please try again.");
+      if (res.status === 429) setFormError('Too many attempts. Please wait a few minutes and try again.');
+      else if (res.status === 401 || res.status === 404) setFormError('Email or password is incorrect.');
+      else setFormError((data && data.error && (data.error.message || data.error)) || 'Sign in failed. Please try again.');
+    } catch (e) {
+      setFormError('Could not reach the server. Please try again.');
     } finally {
-      setLoading(false); // End loading
+      setLoading(false);
+    }
+  };
+
+  const startDemo = async () => {
+    if (demoLoading) return;
+    setDemoLoading(true);
+    setFormError('');
+    try {
+      const token = await requestDemoSession();
+      localStorage.setItem('token', token);
+      navigate('/overview');
+    } catch (err) {
+      setFormError(err.message);
+    } finally {
+      setDemoLoading(false);
     }
   };
 
   return (
-    <div className="login-page">
-      <h2>Welcome to the TollAnalysis Service</h2>
-      <form onSubmit={handleLogin} className="login-form">
-        <div className="input-group">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={loading}
-          />
+    <div className="lgx">
+      <section className="lgx__visual">
+        <img
+          className="lgx__photo"
+          src={motorway}
+          srcSet={`${motorwaySm} 800w, ${motorway} 1600w`}
+          sizes="(max-width: 879px) 100vw, 56vw"
+          alt=""
+          aria-hidden="true"
+        />
+        <div className="lgx__scrim" aria-hidden="true" />
+        <div className="lgx__visual-inner">
+          <Link to="/" className="lgx__brand">
+            <BrandMark badge size={30} /> TollAnalysis
+          </Link>
+          <p className="lgx__visual-line">
+            Interoperable analysis of Greece&rsquo;s motorway toll network — one record of passages
+            across eight operators, with traffic analytics, forecasting and debt settlement.
+          </p>
+          <ul className="lgx__facts">
+            {FACTS.map((f) => <li key={f}>{f}</li>)}
+          </ul>
+          <BrowserFrame url="tollanalysis · toll map" className="lgx__shot">
+            <img src={shotMap} alt="The TollAnalysis toll map" width="1200" height="760" />
+          </BrowserFrame>
         </div>
+      </section>
 
-        <div className="input-group">
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={loading}
-          />
+      <section className="lgx__panel">
+        <div className="lgx__panel-inner">
+          <Link to="/" className="lgx__panel-brand">
+            <BrandMark badge size={26} /> TollAnalysis
+          </Link>
+
+          <h1 className="lgx__title">Operator sign in</h1>
+          <p className="lgx__sub">For operator and administrator accounts.</p>
+
+          {formError && <div className="lgx__alert"><Alert variant="danger">{formError}</Alert></div>}
+
+          <form className="lgx__form" onSubmit={submit} noValidate>
+            <Field label="Email" error={errors.email}>
+              <input
+                className="ui-input"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </Field>
+            <Field label="Password" error={errors.password}>
+              <input
+                className="ui-input"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </Field>
+            <Button type="submit" block loading={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
+          </form>
+
+          <div className="lgx__demo">
+            <div className="lgx__demo-head">
+              <h2>Just exploring?</h2>
+              <p>No account needed — open a read-only session on the sample dataset.</p>
+            </div>
+            <Button variant="accent" block icon="arrow-right" loading={demoLoading} onClick={startDemo}>
+              {demoLoading ? 'Starting demo…' : 'Explore the live demo'}
+            </Button>
+          </div>
+
+          <Link to="/" className="lgx__back">
+            <Icon name="chevron-right" size={14} style={{ transform: 'rotate(180deg)' }} /> Back to home
+          </Link>
         </div>
-
-        <button type="submit" className="login-button" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
-      <ToastContainer position="top-right" autoClose={5000} hideProgressBar />
+      </section>
     </div>
   );
 }
-
-export default LoginPage;
