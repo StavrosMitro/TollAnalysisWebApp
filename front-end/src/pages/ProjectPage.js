@@ -44,6 +44,11 @@ export default function ProjectPage() {
             Built as a Software Engineering group project at ECE, NTUA, then stabilised,
             containerised and redesigned as this portfolio demonstration.
           </p>
+          <p className="pjx-muted">
+            The network geography is inspired by Greece, but the passages, debts, operator display
+            names and contact details are fictional. TollAnalysis is independent and is not operated
+            by, affiliated with, or endorsed by any motorway operator.
+          </p>
         </div>
         <BrowserFrame url="tollanalysis · overview" className="pjx-shot">
           <img src={shotOverview} alt="The TollAnalysis overview dashboard" width="1200" height="760" loading="lazy" />
@@ -101,12 +106,12 @@ export default function ProjectPage() {
         <h2>Contributors</h2>
         <div className="pjx-people">
           <div>
-            <h3>Stavros <span className="pjx-tag">this portfolio work</span></h3>
+            <h3>Stavros Mitropoulos <span className="pjx-tag">portfolio overhaul</span></h3>
             <ul>
               <li>REST API / backend development (Node.js, Express)</li>
               <li>Relational database design</li>
               <li>Project documentation and API functional testing</li>
-              <li>Later: reproducible environment, security &amp; stabilisation, safe demo mode, this UI redesign</li>
+              <li>Later: product direction, reproducible environment, security &amp; stabilisation, safe demo mode, and UI redesign</li>
             </ul>
           </div>
           <div>
