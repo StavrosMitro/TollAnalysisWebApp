@@ -97,7 +97,7 @@ const get_figures = async (req, res) => {
         // Handle unexpected errors
         console.error('Error:', error.message || error.stderr || 'Unknown error.');
         return res.status(500).json({
-            error: error.message || 'An unexpected error occurred.',
+            error: { code: 'FIGURES_UNAVAILABLE', message: 'The optimization figures are unavailable.' },
         });
     }
 };

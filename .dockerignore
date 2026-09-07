@@ -18,6 +18,11 @@ back-end/client
 back-end/var
 back-end/uploads1
 cli-client/token.json
+# Legacy hash-generation helper contains intentionally fictional but known
+# local fixture credentials. It is neither needed nor acceptable in runtime
+# image layers.
+back-end/hashPassword.js
+cli-client
 
 # Editor / OS noise
 **/*.log

@@ -6,6 +6,17 @@ const config = require('../config');
 const dbService = db.getDbServiceInstance();
 
 const authenticate = async (req, res) => {
+    // Public deployments expose only the no-input, read-only demo identity.
+    // Check before touching the database so known seeded credentials cannot be
+    // tested or distinguished remotely.
+    if (config.publicDemoMode) {
+        return res.status(403).json({
+            error: {
+                code: 'PUBLIC_DEMO_MODE',
+                message: 'Operator sign-in is unavailable in the public demo.',
+            },
+        });
+    }
     const { user_email, user_password } = req.body;
     if (!user_email || !user_password) {
         return res.status(400).json({ error: 'Please enter both email and password' });

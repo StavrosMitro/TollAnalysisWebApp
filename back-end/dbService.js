@@ -19,6 +19,7 @@ const pool = mysql.createPool({
 
 // Promisify the pool.query method for easier use with async/await
 const promisePool = pool.promise();
+const closePool = () => promisePool.end();
 const simulateDbError = () => {
     throw new Error('Simulated Database error');
   };
@@ -501,3 +502,4 @@ ORDER BY grouped.passage_date;
     
 }
 module.exports = DbService;
+module.exports.closePool = closePool;

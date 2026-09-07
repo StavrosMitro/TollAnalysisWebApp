@@ -9,7 +9,7 @@
 const { spawn } = require('child_process');
 const config = require('../config');
 
-const TIMEOUT_MS = 20000;
+let activeProcesses = 0;
 
 class InferenceError extends Error {
     constructor(code, message, httpStatus = 500) {
@@ -22,6 +22,18 @@ class InferenceError extends Error {
 
 function runInfer(args) {
     return new Promise((resolve, reject) => {
+        if (activeProcesses >= config.inference.maxConcurrent) {
+            reject(new InferenceError('ENGINE_BUSY', 'The prediction engine is busy. Please try again shortly.', 503));
+            return;
+        }
+        activeProcesses += 1;
+        let settled = false;
+        const finish = (callback) => {
+            if (settled) return;
+            settled = true;
+            activeProcesses -= 1;
+            callback();
+        };
         const proc = spawn(config.pythonBin, ['-m', 'ml.infer', ...args], {
             cwd: config.paths.backendRoot,
             env: { ...process.env, PYTHONPATH: config.paths.backendRoot, PYTHONDONTWRITEBYTECODE: '1' },
@@ -31,36 +43,37 @@ function runInfer(args) {
         let err = '';
         const timer = setTimeout(() => {
             proc.kill('SIGKILL');
-            reject(new InferenceError('TIMEOUT', 'The prediction took too long.', 504));
-        }, TIMEOUT_MS);
+            finish(() => reject(new InferenceError('TIMEOUT', 'The prediction took too long.', 504)));
+        }, config.inference.timeoutMs);
 
-        proc.stdout.on('data', (d) => { out += d.toString(); });
-        proc.stderr.on('data', (d) => { err += d.toString(); });
+        proc.stdout.on('data', (d) => { if (out.length < 1024 * 1024) out += d.toString(); });
+        proc.stderr.on('data', (d) => { if (err.length < 1024 * 1024) err += d.toString(); });
 
         proc.on('error', () => {
             clearTimeout(timer);
-            reject(new InferenceError('ENGINE_UNAVAILABLE', 'The prediction engine is not available.', 503));
+            finish(() => reject(new InferenceError('ENGINE_UNAVAILABLE', 'The prediction engine is not available.', 503)));
         });
 
         proc.on('close', (code) => {
             clearTimeout(timer);
+            if (settled) return;
             let parsed;
             try {
                 parsed = JSON.parse(out.trim().split('\n').filter(Boolean).pop() || '{}');
             } catch (e) {
                 if (err) console.error('[mlInference] non-JSON output:', err.slice(0, 300));
-                return reject(new InferenceError('BAD_OUTPUT', 'The prediction engine returned an unexpected result.', 502));
+                return finish(() => reject(new InferenceError('BAD_OUTPUT', 'The prediction engine returned an unexpected result.', 502)));
             }
             if (parsed && parsed.error) {
                 const { code: c, message: m } = parsed.error;
-                return reject(new InferenceError(c || 'INFERENCE_FAILED', m || 'Prediction failed.',
-                    parsed.http_status || (code === 0 ? 422 : 500)));
+                return finish(() => reject(new InferenceError(c || 'INFERENCE_FAILED', m || 'Prediction failed.',
+                    parsed.http_status || (code === 0 ? 422 : 500))));
             }
             if (code !== 0) {
                 if (err) console.error('[mlInference] exit', code, err.slice(0, 300));
-                return reject(new InferenceError('INFERENCE_FAILED', 'Prediction failed.', 500));
+                return finish(() => reject(new InferenceError('INFERENCE_FAILED', 'Prediction failed.', 500)));
             }
-            resolve(parsed);
+            return finish(() => resolve(parsed));
         });
     });
 }

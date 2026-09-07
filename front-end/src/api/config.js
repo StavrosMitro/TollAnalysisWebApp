@@ -90,3 +90,11 @@ export async function requestDemoSession() {
   }
   return body.token;
 }
+
+/** Runtime flag supplied by the same-origin API, never embedded at build time. */
+export async function getPublicRuntimeConfig() {
+  const res = await fetch(apiUrl('/public-config'), { cache: 'no-store' });
+  if (!res.ok) throw new Error('Could not load deployment configuration.');
+  const body = await res.json();
+  return { publicDemoMode: body.publicDemoMode === true };
+}

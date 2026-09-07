@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LoginPage.css';
-import { apiUrl, requestDemoSession } from '../api/config';
+import { apiUrl, getPublicRuntimeConfig, requestDemoSession } from '../api/config';
 import { Icon, Button, Field, Alert, BrandMark, useToast } from '../components/ui';
 import BrowserFrame from '../components/BrowserFrame';
 import shotMap from '../assets/shot-map.webp';
@@ -22,6 +22,18 @@ export default function LoginPage() {
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  // Default to the safer presentation in a production build until the
+  // same-origin runtime flag answers. This keeps normal credentials out of a
+  // public deployment even though the React build itself is platform-neutral.
+  const [publicDemoMode, setPublicDemoMode] = useState(process.env.NODE_ENV === 'production');
+
+  React.useEffect(() => {
+    let live = true;
+    getPublicRuntimeConfig()
+      .then((runtime) => { if (live) setPublicDemoMode(runtime.publicDemoMode); })
+      .catch(() => { /* retain production's fail-closed default */ });
+    return () => { live = false; };
+  }, []);
 
   const validate = () => {
     const e = {};
@@ -110,38 +122,40 @@ export default function LoginPage() {
             <BrandMark badge size={26} /> TollAnalysis
           </Link>
 
-          <h1 className="lgx__title">Operator sign in</h1>
-          <p className="lgx__sub">For operator and administrator accounts.</p>
+          <h1 className="lgx__title">{publicDemoMode ? 'Explore the demo' : 'Operator sign in'}</h1>
+          <p className="lgx__sub">{publicDemoMode ? 'A read-only tour of the educational sample dataset.' : 'For operator and administrator accounts.'}</p>
 
           {formError && <div className="lgx__alert"><Alert variant="danger">{formError}</Alert></div>}
 
-          <form className="lgx__form" onSubmit={submit} noValidate>
-            <Field label="Email" error={errors.email}>
-              <input
-                className="ui-input"
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </Field>
-            <Field label="Password" error={errors.password}>
-              <input
-                className="ui-input"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </Field>
-            <Button type="submit" block loading={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
-          </form>
+          {!publicDemoMode && (
+            <form className="lgx__form" onSubmit={submit} noValidate>
+              <Field label="Email" error={errors.email}>
+                <input
+                  className="ui-input"
+                  type="email"
+                  autoComplete="username"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </Field>
+              <Field label="Password" error={errors.password}>
+                <input
+                  className="ui-input"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </Field>
+              <Button type="submit" block loading={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
+            </form>
+          )}
 
           <div className="lgx__demo">
             <div className="lgx__demo-head">
-              <h2>Just exploring?</h2>
+              <h2>{publicDemoMode ? 'Start a read-only session' : 'Just exploring?'}</h2>
               <p>No account needed — open a read-only session on the sample dataset.</p>
             </div>
             <Button variant="accent" block icon="arrow-right" loading={demoLoading} onClick={startDemo}>

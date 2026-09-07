@@ -77,20 +77,11 @@ se2414 --help
 
 ---
 
-## 🔐 Login Credentials
+## 🔐 Demo access
 
-To use the application, you must log in as either an **admin** or a company user.
-
-- **Admin Login:**
-  - **Username:** `admin@yme.gov.gr`
-  - **Password:** `yme123!`
-  - These credentials are set by default in the database and can be found in `back-end/hashPassword.js` and are initialized/reset via the backend admin endpoints.
-
-- **Company Users:**
-  - Usernames and passwords for company users are managed by the admin via the CLI or backend endpoints.
-  - Each company user can only access their own company's data.
-
-- You can log in via the web interface or CLI. If you need to create or reset users, use the admin endpoints or CLI commands.
+The portfolio deployment uses a no-credential, read-only demo session. Operator
+and administrator fixtures exist only for local development and disposable test
+databases; their credentials are deliberately not documented for public use.
 
 ---
 
@@ -133,4 +124,3 @@ Other contributors:
 ## ⭐ Give us a star if you liked the project!
 
 _Disclaimer: This project is for educational purposes only and not intended for commercial use._
-

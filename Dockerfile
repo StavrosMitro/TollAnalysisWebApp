@@ -61,7 +61,10 @@ ENV NODE_ENV=production \
     CLIENT_BUILD_DIR=/app/back-end/client \
     RUNTIME_DIR=/tmp/toll-analysis-runtime
 
-RUN mkdir -p /tmp/toll-analysis-runtime && chown -R node:node /tmp/toll-analysis-runtime /app
+# The application source and dependency trees are read-only at runtime. Only
+# generated inference files need ownership, avoiding a slow recursive chown of
+# the complete Python/Node image on every source change.
+RUN mkdir -p /tmp/toll-analysis-runtime && chown node:node /tmp/toll-analysis-runtime
 
 USER node
 

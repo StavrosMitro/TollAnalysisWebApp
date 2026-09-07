@@ -10,6 +10,47 @@ const DbService = require('./dbService');
 
 const app = express();
 
+app.disable('x-powered-by');
+if (config.trustProxy) app.set('trust proxy', 1);
+
+// Deliberately hand-written rather than a broad header package: PyVis is
+// delivered in a sandboxed srcdoc iframe and needs its pinned CDN scripts plus
+// inline generated bootstrap code. The main application otherwise remains
+// same-origin only.
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; " +
+        "img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; " +
+        "connect-src 'self'; font-src 'self' data:; frame-src 'self'"
+    );
+    if (config.isProduction) {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+});
+
+if (config.isProduction) {
+    app.use((req, res, next) => {
+        const started = process.hrtime.bigint();
+        res.on('finish', () => {
+            const durationMs = Number(process.hrtime.bigint() - started) / 1e6;
+            // Never log request bodies, authorization headers, query strings,
+            // database errors, tokens, or stack traces.
+            console.log(JSON.stringify({
+                level: 'info', event: 'http_request', method: req.method,
+                path: req.path, status: res.statusCode, duration_ms: Math.round(durationMs),
+            }));
+        });
+        next();
+    });
+}
+
 // --- Middleware ----------------------------------------------------------
 // CORS is driven entirely by configuration. In production the frontend is
 // served same-origin so the allow-list is empty by default (no cross-origin
@@ -20,8 +61,8 @@ const corsOptions =
     : { origin: false };
 app.use(cors(corsOptions));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // Static assets that pre-date this change (sample figures / uploads).
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -39,6 +80,10 @@ app.get('/healthz', async (req, res) => {
         return res.status(503).json({ status: 'unavailable', database: 'down' });
     }
 });
+
+// Liveness deliberately does not query MySQL: it lets a platform distinguish
+// a healthy Node process from a temporarily unavailable dependency.
+app.get('/livez', (req, res) => res.status(200).json({ status: 'ok' }));
 
 // --- Swagger / OpenAPI -------------------------------------------------
 const swaggerSpec = swaggerJsdoc({
@@ -85,6 +130,10 @@ app.use('/api/passesCost', passesCost);
 app.use('/api/chargesBy', chargesBy);
 app.use('/api/passAnalysis', passAnalysis);
 app.use('/api', authRouter);
+app.get('/api/public-config', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ publicDemoMode: config.publicDemoMode });
+});
 app.use('/api', tollRouter);
 app.use('/api/forecast', forecast);
 app.use('/api/peak_hour', peak_hour);
@@ -126,7 +175,10 @@ app.use((err, req, res, next) => {
     // eslint-disable-next-line no-console
     console.error('[unhandled error]', err && err.message);
     if (res.headersSent) return;
-    res.status(500).json({ error: 'Internal server error' });
+    if (err && (err.type === 'entity.too.large' || err.status === 413)) {
+        return res.status(413).json({ error: { code: 'PAYLOAD_TOO_LARGE', message: 'Request body is too large.' } });
+    }
+    res.status(500).json({ error: { code: 'INTERNAL', message: 'Internal server error' } });
 });
 
 module.exports = app;
