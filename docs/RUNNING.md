@@ -32,15 +32,11 @@ a known-weak value, or the backend refuses to start.
 
 ### Seeded login accounts
 
-`db/init/02-data.sql` seeds one administrator (`admin@yme.gov.gr`, role `admin`)
-and seven operator accounts (`admin@aodos.gr`, `admin@gefyra.gr`,
-`admin@egnatia.eu`, `admin@kentrikiodos.gr`, `admin@moreas.com.gr`,
-`admin@neaodos.gr`, `admin@olympiaodos.gr` — roles `aodos` … `olympiaodos`).
-
-These are fictional educational accounts for a sample dataset, not real
-credentials. Their passwords are **not published here**; for a no-login tour use
-the **Explore Live Demo** button, which needs no credentials (see *Public demo*
-below).
+`db/init/02-data.sql` seeds local administrator and legacy operator accounts
+for the educational sample. Their internal role strings are retained for
+compatibility and are not public operator brands. No local account identifiers
+or credentials are published; use **Explore Live Demo** for the no-login,
+read-only tour (see *Public demo* below).
 
 ### Resetting the database
 

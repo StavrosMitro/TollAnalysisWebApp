@@ -21,6 +21,9 @@ listed separately at the end.
 | **Checks** | Real photograph (not generated). No readable licence plates. No unrelated brand logos or signage. |
 | **Used on** | Landing page hero and login page visual panel (behind a dark navy overlay). |
 
+The photograph documents real Greek infrastructure only. Its use does not imply
+an affiliation with, endorsement by, or operation by any motorway company.
+
 ---
 
 ## Not used (explicitly excluded)

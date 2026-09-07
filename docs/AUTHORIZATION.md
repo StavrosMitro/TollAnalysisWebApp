@@ -11,7 +11,7 @@ Frontend hiding is a convenience, never a security control. Covered by
 | *(none)* | no / invalid token | anonymous visitor |
 | `demo` | `POST /api/auth/demo-login` (seeded identity `demo@toll-analysis.example`) | fictional **platform-wide, read-only observer** for the public portfolio demo. Short-lived token (60–120 min). |
 | company roles: `aodos`, `gefyra`, `egnatia`, `kentrikiodos`, `moreas`, `neaodos`, `olympiaodos` | `POST /api/login` | one seeded account per toll operator |
-| `admin` | `POST /api/login` (`admin@yme.gov.gr`) | full access |
+| `admin` | `POST /api/login` (local development only) | full access |
 
 Role comes **only** from the verified JWT (`user_role` claim). A token claiming an
 unknown role is denied everywhere except public routes. `demo-login` takes no
