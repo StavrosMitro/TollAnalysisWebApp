@@ -1,255 +1,105 @@
 /**
- * forecast_router.test.js
- *
- * Full Jest + SuperTest test suite for the /api/forecast route.
- * Mocks out database calls and Python script calls so tests run quickly.
+ * /api/forecast — passage-volume forecast route.
+ * DB and the Python inference bridge are mocked; no real model runs.
  */
-
 const request = require('supertest');
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const path = require('path');
-// Load .env from one folder up so that JWT_SECRET is available
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// 1) Mock DbService, so no real DB is called
-jest.mock('../dbService.js', () => {
-  return {
-    getDbServiceInstance: jest.fn()
-  };
+jest.mock('../dbService.js', () => ({ getDbServiceInstance: jest.fn() }));
+jest.mock('../lib/mlInference', () => {
+  class InferenceError extends Error {
+    constructor(code, message, httpStatus = 500) {
+      super(message);
+      this.code = code;
+      this.httpStatus = httpStatus;
+    }
+  }
+  return { forecastVolume: jest.fn(), predictPeakHours: jest.fn(), InferenceError };
 });
+
 const DbService = require('../dbService.js');
-
-// 2) Mock the child_process spawn to avoid calling Python for real
-jest.mock('child_process', () => ({
-  spawn: jest.fn()
-}));
-const { spawn } = require('child_process');
-
-// 3) Import the router you want to test
+const { forecastVolume, InferenceError } = require('../lib/mlInference');
 const forecastRouter = require('../routers/forecast_router');
 
-// ------------------
-// Setup Mock Return
-// ------------------
-const mockDbInstance = {
-  tollstations: jest.fn(),    // used by forecast_controller
-  data_for_nop: jest.fn()     // used by makePassagePrediction
-};
-DbService.getDbServiceInstance.mockReturnValue(mockDbInstance);
+const db = { tollstations: jest.fn() };
+DbService.getDbServiceInstance.mockReturnValue(db);
 
-// By default, let spawn return a "successful" mock process
-spawn.mockImplementation(() => {
-  const mockProcess = {
-    stdout: {
-      on: jest.fn((event, handler) => {
-        if (event === 'data') {
-          // We'll wait to call handler(...) in the test if needed
-        }
-      })
-    },
-    stderr: {
-      on: jest.fn()
-    },
-    on: jest.fn((event, handler) => {
-      if (event === 'close') {
-        // By default, simulate successful exit code 0
-        handler(0);
-      }
-    })
-  };
-  return mockProcess;
-});
-
-// ------------------
-// Minimal App Setup
-// ------------------
 const app = express();
 app.use(express.json());
 app.use('/api/forecast', forecastRouter);
 
-// ------------------
-// Generate JWT Token for Testing
-// ------------------
 let token;
 beforeAll(() => {
-  // Adjust the payload as required by your middleware/authorization logic.
-  const payload = {
-    username: 'admin@yme.gov.gr',
-    user_role: 'admin'
-  };
-  const secret = process.env.JWT_SECRET || 'mySuperSecretKey';
-  token = jwt.sign(payload, secret, { expiresIn: '1h' });
+  token = jwt.sign({ user_email: 'admin@yme.gov.gr', user_role: 'admin' },
+    process.env.JWT_SECRET || 'mySuperSecretKey', { expiresIn: '1h' });
 });
+beforeEach(() => jest.clearAllMocks());
 
-// ------------------
-// Tests
-// ------------------
-describe('GET /api/forecast/:company_id?/:date?', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+const OK_RESULT = {
+  task: 'passage_volume', operator: 'NAO', date: '2022-03-15',
+  predictions: [0.3, 0.4],
+  stations: [
+    { tollID: 'NAO01', predicted_passages: 0.3, station_seen_in_training: true },
+    { tollID: 'NAO02', predicted_passages: 0.4, station_seen_in_training: true },
+  ],
+  total_predicted_passages: 0.7,
+  model: { artifact_version: 'v2', train_date_range: { min: '2021-12-31', max: '2022-01-10' } },
+  evaluation: { test_mae: 0.27, sanity_check_baseline: { name: "per_station_mean", test_mae: 0.28 } },
+  limitations: 'educational sample',
+};
+
+describe('GET /api/forecast/:company_id/:date', () => {
+  it('400 when the date is missing', async () => {
+    const res = await request(app).get('/api/forecast/NAO').set('x-observatory-auth', token);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('MISSING_PARAMS');
   });
 
-  // SCENARIO 1: Missing parameters => 400
-  it('should return 400 if company_id or date are missing', async () => {
-    // e.g. call /api/forecast with no params
-    const response = await request(app)
-      .get('/api/forecast/')
-      .set('x-observatory-auth', token);
-    expect(response.status).toBe(400);
-    expect(response.body).toHaveProperty('error', 'Missing required parameters');
+  it('400 on a non-YYYYMMDD date', async () => {
+    const res = await request(app).get('/api/forecast/NAO/2022-03-15').set('x-observatory-auth', token);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('BAD_DATE');
+    expect(forecastVolume).not.toHaveBeenCalled();
   });
 
-  // SCENARIO 2: Invalid date format => 400
-  it('should return 400 for invalid date format', async () => {
-    // "2021-01-01" doesn't match YYYYMMDD
-    const response = await request(app)
-      .get('/api/forecast/AM/2021-01-01')
-      .set('x-observatory-auth', token);
-    expect(response.status).toBe(400);
-    expect(response.body).toHaveProperty('error', 'Invalid date format. Use YYYYMMDD.');
+  it('404 when the operator has no toll stations', async () => {
+    db.tollstations.mockResolvedValueOnce([]);
+    const res = await request(app).get('/api/forecast/ZZ/20220315').set('x-observatory-auth', token);
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('UNKNOWN_OPERATOR');
+    expect(forecastVolume).not.toHaveBeenCalled();
   });
 
-  // SCENARIO 3: No toll stations => 204
-  // If tollstations() returns [] or null, the controller sends 204
-  it('should return 204 if no toll stations found for the company', async () => {
-    mockDbInstance.tollstations.mockResolvedValueOnce([]); // or null
-    const response = await request(app)
-      .get('/api/forecast/ZZ/20210101')
-      .set('x-observatory-auth', token);
-    expect(response.status).toBe(204);
-    // 204 means No Content, so typically no body is returned
-    expect(response.body).toEqual({});
+  it('surfaces a missing/incompatible model artifact as 503', async () => {
+    db.tollstations.mockResolvedValueOnce([{ Toll_id: 'NAO01' }]);
+    forecastVolume.mockRejectedValueOnce(new InferenceError('MODEL_UNAVAILABLE', 'model artifact not found', 503));
+    const res = await request(app).get('/api/forecast/NAO/20220315').set('x-observatory-auth', token);
+    expect(res.status).toBe(503);
+    expect(res.body.error.code).toBe('MODEL_UNAVAILABLE');
   });
 
-  // SCENARIO 4: No data_for_nop => 204
-  // Even if toll stations exist, if data_for_nop returns null, we get 204 in makePassagePrediction
-  it('should return 204 if no data_for_nop for the company', async () => {
-    // First call: tollstations => some data
-    mockDbInstance.tollstations.mockResolvedValueOnce([
-      { Toll_id: 'T001' }
-    ]);
-    // Second call: data_for_nop => null => 204
-    mockDbInstance.data_for_nop.mockResolvedValueOnce(null);
-
-    const response = await request(app)
-      .get('/api/forecast/AM/20210101')
-      .set('x-observatory-auth', token);
-    expect(response.status).toBe(204);
-    expect(response.body).toEqual({});
+  it('200 with predictions + model + evaluation on success', async () => {
+    db.tollstations.mockResolvedValueOnce([{ Toll_id: 'NAO01' }, { Toll_id: 'NAO02' }]);
+    forecastVolume.mockResolvedValueOnce(OK_RESULT);
+    const res = await request(app).get('/api/forecast/NAO/20220315').set('x-observatory-auth', token);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.predictions)).toBe(true);
+    expect(res.body.predictions).toHaveLength(2);
+    expect(res.body.model.artifact_version).toBe('v2');
+    expect(res.body.evaluation).toHaveProperty('sanity_check_baseline');
+    expect(JSON.stringify(res.body)).not.toMatch(/beats_baseline/);
+    expect(forecastVolume).toHaveBeenCalledWith('NAO', '2022-03-15', ['NAO01', 'NAO02']);
   });
 
-  // SCENARIO 5: Python script fails => 500
-  // If the script exits with code != 0, we return 500
-  it('should return 500 if Python script exits with non-zero code', async () => {
-    mockDbInstance.tollstations.mockResolvedValueOnce([
-      { Toll_id: 'T001' }
-    ]);
-    mockDbInstance.data_for_nop.mockResolvedValueOnce([{ some: 'data' }]);
-
-    // Force spawn to simulate error exit code 1
-    spawn.mockImplementationOnce(() => {
-      const mockProcess = {
-        stdout: { on: jest.fn() },
-        stderr: { on: jest.fn() },
-        on: jest.fn((event, handler) => {
-          if (event === 'close') {
-            handler(1); // code=1 => error
-          }
-        })
-      };
-      return mockProcess;
-    });
-
-    const response = await request(app)
-      .get('/api/forecast/AM/20210101')
-      .set('x-observatory-auth', token);
-    expect(response.status).toBe(500);
-    expect(response.body).toHaveProperty('error', 'Error making predictions');
-  });
-
-  // SCENARIO 6: Successful Prediction => 200 + JSON
-  it('should return 200 and JSON array if predictions exist', async () => {
-    mockDbInstance.tollstations.mockResolvedValueOnce([
-      { Toll_id: 'T001' }
-    ]);
-    mockDbInstance.data_for_nop.mockResolvedValueOnce([{ some: 'data' }]);
-
-    // Let's simulate the Python script output
-    // We'll intercept the "on('data', ...)" callback and feed it JSON
-    spawn.mockImplementationOnce(() => {
-      const mockProcess = {
-        stdout: {
-          on: jest.fn((event, handler) => {
-            if (event === 'data') {
-              // Provide a JSON string for predictions
-              handler(JSON.stringify([
-                { passage_date: '2021-01-01', predicted_passages: 123 }
-              ]));
-            }
-          })
-        },
-        stderr: { on: jest.fn() },
-        on: jest.fn((event, handler) => {
-          if (event === 'close') {
-            // Simulate exit code 0 => success
-            handler(0);
-          }
-        })
-      };
-      return mockProcess;
-    });
-
-    const response = await request(app)
-      .get('/api/forecast/AM/20210101')
-      .set('x-observatory-auth', token);
-    expect(response.status).toBe(200);
-    expect(Array.isArray(response.body)).toBe(true);
-    if (response.body.length > 0) {
-      expect(response.body[0]).toHaveProperty('passage_date');
-      expect(response.body[0]).toHaveProperty('predicted_passages');
-    }
-  });
-
-  // SCENARIO 7: Successful Prediction => 200 + CSV
-  it('should return 200 and CSV file if format=csv', async () => {
-    mockDbInstance.tollstations.mockResolvedValueOnce([
-      { Toll_id: 'T001' }
-    ]);
-    mockDbInstance.data_for_nop.mockResolvedValueOnce([{ some: 'data' }]);
-  
-    spawn.mockImplementationOnce(() => {
-      const mockProcess = {
-        stdout: {
-          on: jest.fn((event, handler) => {
-            if (event === 'data') {
-              // Provide a JSON string for predictions
-              handler(JSON.stringify([
-                { passage_date: '2021-01-01', predicted_passages: 123 }
-              ]));
-            }
-          })
-        },
-        stderr: { on: jest.fn() },
-        on: jest.fn((event, handler) => {
-          if (event === 'close') {
-            handler(0);
-          }
-        })
-      };
-      return mockProcess;
-    });
-  
-    const response = await request(app)
-      .get('/api/forecast/AM/20210101?format=csv')
-      .set('x-observatory-auth', token);
-    expect(response.status).toBe(200);
-    expect(response.headers['content-type']).toContain('text/csv');
-  
-    // Match the headers that are actually in your CSV
-    expect(response.text).toMatch(/"passage_date","predicted_passages"/);
-  
-    // Match the row data
-    expect(response.text).toMatch(/"2021-01-01",123/);
+  it('200 + text/csv when format=csv', async () => {
+    db.tollstations.mockResolvedValueOnce([{ Toll_id: 'NAO01' }]);
+    forecastVolume.mockResolvedValueOnce(OK_RESULT);
+    const res = await request(app).get('/api/forecast/NAO/20220315?format=csv').set('x-observatory-auth', token);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.text).toMatch(/tollID/);
   });
 });

@@ -4,7 +4,7 @@
 # (trained with scikit-learn 1.6.0 on NumPy 2.x) load reproducibly.
 # Target interpreter: CPython 3.11.
 #
-# --- Machine learning (predict.py / predict_peak_hours.py) ---
+# --- Machine learning (ml/ package: training, evaluation, inference) ---
 numpy==2.2.3
 scipy==1.15.2
 scikit-learn==1.6.0
@@ -14,6 +14,10 @@ pandas==2.2.3
 python-dateutil==2.9.0.post0
 pytz==2025.1
 tzdata==2025.1
+
+# Evaluation plots only (ml.evaluate_all / ml.evaluate_legacy). Not imported by
+# request-path inference.
+matplotlib==3.9.4
 
 # --- Database import scripts (passage2mysql.py / csv_to_mysql.py) ---
 mysql-connector-python==9.2.0

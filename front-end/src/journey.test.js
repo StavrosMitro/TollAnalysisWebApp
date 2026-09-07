@@ -50,8 +50,25 @@ function routeFetch(url, opts) {
     csv: 'Debtor,Creditor,Amount\nNO,AM,120.50\nEG,OO,38.35',
   });
   if (u.includes('/chargesBy/')) return json({ tollOpID: 'NAO', vOpList: [{ visitingOpID: 'AM', nPasses: 13, passesCost: 32.5 }] });
-  if (u.includes('/forecast/')) return json({ predictions: [1.2, 3.5, 2.1] });
-  if (u.includes('/peak_hour/')) return json([{ passage_date: '2022-01-10 00:00:00', predicted_hour: 14.2 }]);
+  if (u.includes('/forecast/')) return json({
+    empty: false,
+    predictions: [1.2, 3.5, 2.1],
+    stations: [
+      { tollID: 'NAO01', predicted_passages: 1.2, station_seen_in_training: true },
+      { tollID: 'NAO02', predicted_passages: 3.5, station_seen_in_training: true },
+      { tollID: 'NAO03', predicted_passages: 2.1, station_seen_in_training: true },
+    ],
+    model: { artifact_version: 'v2', train_date_range: { min: '2021-12-31', max: '2022-01-10' }, provenance: { code_sha256: 'deadbeef00000000', data_sha256: {} } },
+    evaluation: { test_mae: 0.3, test_rmse: 0.5, sanity_check_baseline: { name: 'per_station_mean', test_mae: 0.28 } },
+    date_context: { extrapolation: false },
+  });
+  if (u.includes('/peak_hour/')) return json({
+    empty: false,
+    predictions: [{ passage_date: '2022-01-13', company: 'NAO', predicted_hour: 14 }],
+    model: { artifact_version: 'v2' },
+    evaluation: { exact_hour_accuracy: 0, within_1_hour_accuracy: 0, mean_circular_abs_error_hours: 5, sanity_check_baseline: { name: 'global_peak_hour_mode' } },
+    date_context: { extrapolation: false },
+  });
   if (u.endsWith('/logout')) return json({ message: 'Logout Successful' });
   return json({}, 200);
 }
@@ -97,7 +114,7 @@ test('visitor: landing -> demo -> overview -> map -> analytics -> forecast -> de
 
   // 6. Traffic Forecast (volume forecast auto-runs on mount)
   await userEvent.click(within(mainNav()).getByRole('link', { name: /traffic forecast/i }));
-  expect(await screen.findByText(/educational model/i)).toBeInTheDocument();
+  expect(await screen.findByText(/integration demo/i)).toBeInTheDocument();
   expect(await screen.findByText(/Total forecast passages/i)).toBeInTheDocument();
 
   // 7. Debt Optimization (read-only)

@@ -81,6 +81,23 @@ export default function ProjectPage() {
       </section>
 
       <section className="ui-section">
+        <h2>Replaceable ML integration</h2>
+        <p className="pjx-muted">
+          The Traffic Forecast feature is built as an <strong>integration layer</strong>, not a
+          predictor: dataset validation, reproducible preprocessing, a versioned model artifact
+          that records the source-code and dataset hashes that produced it, inference-only API
+          serving, load-time compatibility checks, and structured errors. The bundled models are
+          trained on a fixed ~2-week 2022 sample purely to exercise that contract end to end.
+        </p>
+        <p className="pjx-muted">
+          Given <strong>real client data or a client-provided model</strong>, the same pipeline
+          retrains a replacement bundle and the same API serves it — no application changes.
+          Everything is reproducible in the pinned container
+          (<code>docs/ML_METHODOLOGY.md</code>).
+        </p>
+      </section>
+
+      <section className="ui-section">
         <h2>Contributors</h2>
         <div className="pjx-people">
           <div>
@@ -108,10 +125,11 @@ export default function ProjectPage() {
       </section>
 
       <Alert variant="warning" title="Machine-learning limitations">
-        The forecasting feature is an <strong>educational demonstration</strong>. The models are
-        RandomForest regressors trained on a small 2022 sample; the current evaluation does not use a
-        strict chronological hold-out or a baseline comparison, so the numbers should not be read as
-        production-grade accuracy.
+        The forecasting models are an <strong>integration demonstration</strong>, not a predictor.
+        They are RandomForest regressors trained on a fixed ~2-week 2022 sample and evaluated on a
+        chronological hold-out; naive means are reported as sanity checks. On a sample this small
+        the models track those means closely — the numbers show the integration works, not that the
+        forecasts are accurate.
       </Alert>
     </>
   );

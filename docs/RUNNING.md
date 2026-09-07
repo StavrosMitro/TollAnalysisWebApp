@@ -113,9 +113,24 @@ forecasts; every write / admin / training operation is denied. See
 | `cd front-end && CI=true npm test` | Frontend tests (incl. the jsdom visitor-journey e2e) | Node only |
 | `cd front-end && npm run build` | Frontend production build | Node only |
 | `cd front-end && npm run visual-check` | Screenshots every page at 4 viewports and flags overflow / console errors. Writes to `front-end/.visual/` (gitignored). | **A running stack** + a Chromium at `CHROMIUM_PATH` (default `/snap/bin/chromium`) |
-
-`INTEGRATION_ML=true npm run test:integration` also runs the forecast test (needs
-`PYTHON_BIN` pointing at an interpreter with scikit-learn).
+| `docker compose --profile ml run --rm ml -m ml.tests` | The ML pipeline test suite (feature determinism, split integrity, baselines, circular metrics, artifact loading, integer peak hour, end-to-end `ml.infer`). Runs in the pinned image. | Docker |
 
 `npm run visual-check` expects the app at `http://localhost:9115` — start it with
 `docker compose up -d` from the repo root first (override with `APP_URL`).
+
+## Machine-learning pipeline
+
+The forecasting models are trained and evaluated reproducibly inside the pinned
+container. See [`docs/ML_METHODOLOGY.md`](ML_METHODOLOGY.md) and
+[`back-end/ml/README.md`](../back-end/ml/README.md).
+
+```bash
+docker compose --profile ml run --rm ml -m ml.validate_data     # audit data + lineage
+docker compose --profile ml run --rm ml -m ml.evaluate_legacy   # baseline the old approach
+docker compose --profile ml run --rm ml -m ml.train_all         # (re)train v2 deterministically
+docker compose --profile ml run --rm ml -m ml.evaluate_all      # held-out test evaluation
+docker compose --profile ml run --rm ml -m ml.smoke_test        # load + inference smoke test
+```
+
+The public demo forecast endpoints load pre-trained artifacts only — they never
+train. `POST /api/training` is admin-only and gated by `DISABLE_DESTRUCTIVE_OPS`.

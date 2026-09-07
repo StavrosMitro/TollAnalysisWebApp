@@ -1,0 +1,102 @@
+{
+  "schema_version": "2.0.0",
+  "model_type": "RandomForestRegressor(n_estimators=120, max_depth=6, min_samples_leaf=3) + station vocabulary",
+  "task": "passage_volume",
+  "operator": "AM",
+  "target": "passages per station-day",
+  "feature_names": [
+    "station_code",
+    "day_of_week",
+    "month",
+    "day_of_year",
+    "is_weekend",
+    "dow_sin",
+    "dow_cos",
+    "doy_sin",
+    "doy_cos"
+  ],
+  "training_data_source": "ml/data/passages.csv (seeded Passages 2021-12-31..2022-01-14)",
+  "train_date_range": {
+    "n": 11,
+    "min": "2021-12-31",
+    "max": "2022-01-10"
+  },
+  "val_date_range": {
+    "n": 2,
+    "min": "2022-01-11",
+    "max": "2022-01-12"
+  },
+  "test_date_range": {
+    "n": 2,
+    "min": "2022-01-13",
+    "max": "2022-01-14"
+  },
+  "row_counts": {
+    "train_val_grid": 390,
+    "stations": 30,
+    "raw_passages": 132,
+    "target_zero_frac": 0.8025641025641026
+  },
+  "random_seed": 42,
+  "metrics": {
+    "validation_sanity_check": {
+      "mae": 0.3101806627304452,
+      "rmse": 0.6043310084298377,
+      "smape": 112.98565092771886,
+      "n": 60
+    },
+    "rolling_origin_sanity_check": {
+      "folds": 7,
+      "mean_mae": 0.30577223553240657
+    },
+    "held_out_test": "see ml/evaluation/v2/metrics.json (ml.evaluate_all)"
+  },
+  "baseline_metrics": {
+    "validation_sanity_check": {
+      "global_mean": {
+        "mae": 0.4861616161616161,
+        "rmse": 0.7371363946239226,
+        "smape": 186.7599292635552,
+        "n": 60
+      },
+      "per_station_mean": {
+        "mae": 0.25757575757575757,
+        "rmse": 0.5961307749365454,
+        "smape": 113.90989974937345,
+        "n": 60
+      }
+    },
+    "not_applicable": [
+      "last_value",
+      "seasonal_naive_7d"
+    ]
+  },
+  "notes": "Integration demo. Per-station daily counts in this ~2-week sample are near-binary and sparse; the model exists to exercise the training/serving contract, not to forecast.",
+  "created_at": "2026-09-07T07:51:20.940408+00:00",
+  "library_versions": {
+    "python": "3.11.2",
+    "scikit_learn": "1.6.0",
+    "numpy": "2.2.3",
+    "pandas": "2.2.3",
+    "joblib": "1.4.2"
+  },
+  "provenance": {
+    "git": {
+      "commit": null,
+      "dirty": false
+    },
+    "code_sha256": "0968090b01f164ade6b6b4e31798be84988809ecf1b7f94f52ee65c642b3d387",
+    "data_sha256": {
+      "passages_csv": "e8d6b5f3722eada80fccafddf049809492b9f0e0a84e80ff1c64f825c36cde5c",
+      "tolls_csv": "8a94b70444ab8d24802dacc19e862fea103a9afcfc13caadc27cff115ea358e0"
+    },
+    "library_versions": {
+      "python": "3.11.2",
+      "scikit_learn": "1.6.0",
+      "numpy": "2.2.3",
+      "pandas": "2.2.3",
+      "joblib": "1.4.2"
+    },
+    "created_at": "2026-09-07T07:51:20.941804+00:00"
+  }
+}

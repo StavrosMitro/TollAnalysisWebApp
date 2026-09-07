@@ -64,26 +64,56 @@ describe('AnalyticsPage', () => {
 
 /* ---------------- Forecast ---------------- */
 describe('ForecastPage', () => {
-  test('shows the educational-limitation note prominently', () => {
+  test('frames the feature as a replaceable integration, not a predictor', () => {
     renderWithProviders(<ForecastPage />);
-    expect(screen.getByText(/educational model/i)).toBeInTheDocument();
-    expect(screen.getByText(/not production-grade/i)).toBeInTheDocument();
+    expect(screen.getByText(/integration demo/i)).toBeInTheDocument();
+    expect(screen.getByText(/complete, replaceable ML integration/i)).toBeInTheDocument();
+    expect(screen.getByText(/sanity checks/i)).toBeInTheDocument();
+    expect(screen.getByText(/replacement bundle/i)).toBeInTheDocument();
   });
 
-  test('volume forecast auto-runs and shows a result summary', async () => {
-    global.fetch.mockResolvedValue({ ok: true, status: 200, json: async () => ({ predictions: [1.2, 3.4, 2.1] }) });
+  test('volume forecast auto-runs and shows the held-out result + sanity-check baseline', async () => {
+    global.fetch.mockResolvedValue({
+      ok: true, status: 200,
+      json: async () => ({
+        empty: false,
+        predictions: [1.2, 3.4, 2.1],
+        stations: [
+          { tollID: 'NAO01', predicted_passages: 1.2 },
+          { tollID: 'NAO02', predicted_passages: 3.4 },
+          { tollID: 'NAO03', predicted_passages: 2.1 },
+        ],
+        model: {
+          artifact_version: 'v2',
+          train_date_range: { min: '2021-12-31', max: '2022-01-10' },
+          provenance: { code_sha256: 'abcdef1234567890', data_sha256: {} },
+        },
+        evaluation: { test_mae: 0.3, test_rmse: 0.5, sanity_check_baseline: { name: 'per_station_mean', test_mae: 0.28 } },
+        date_context: { extrapolation: false },
+      }),
+    });
     renderWithProviders(<ForecastPage />);
     expect(await screen.findByText(/Total forecast passages/i)).toBeInTheDocument();
+    expect(await screen.findByText(/held-out test mae/i)).toBeInTheDocument();
+    expect(screen.getByText(/a "per_station_mean" scores MAE 0\.28/i)).toBeInTheDocument();
   });
 
-  test('peak-hour: explains the fractional-hour rounding', async () => {
+  test('peak-hour: integer hour, circular note, and an extrapolation warning for far dates', async () => {
     renderWithProviders(<ForecastPage />);
     global.fetch.mockResolvedValue({
       ok: true, status: 200,
-      json: async () => ([{ passage_date: '2022-01-10 00:00:00', predicted_hour: 14.26 }]),
+      json: async () => ({
+        empty: false,
+        predictions: [{ passage_date: '2025-06-01', company: 'NAO', predicted_hour: 14 }],
+        model: { artifact_version: 'v2' },
+        evaluation: { exact_hour_accuracy: 0, within_1_hour_accuracy: 0, mean_circular_abs_error_hours: 5, sanity_check_baseline: { name: 'global_peak_hour_mode' } },
+        date_context: { extrapolation: true, dates_outside_observed_window: ['2025-06-01'] },
+      }),
     });
     await userEvent.click(screen.getByRole('button', { name: /^predict$/i }));
-    expect(await screen.findByText(/rounded to the nearest whole hour/i)).toBeInTheDocument();
+    expect(await screen.findByText(/highest predicted passage volume/i)).toBeInTheDocument();
+    expect(screen.getByText(/within one hour/i)).toBeInTheDocument();
+    expect(screen.getByText(/unvalidated extrapolation/i)).toBeInTheDocument();
   });
 });
 
@@ -111,6 +141,6 @@ describe('ProjectPage', () => {
     expect(screen.getByText(/REST API \/ backend development/i)).toBeInTheDocument();
     expect(screen.getByText(/not every feature was implemented by\s+one person/i)).toBeInTheDocument();
     expect(screen.getByText(/NTUA/i)).toBeInTheDocument();
-    expect(screen.getByText(/educational demonstration/i)).toBeInTheDocument();
+    expect(screen.getByText(/integration demonstration/i)).toBeInTheDocument();
   });
 });

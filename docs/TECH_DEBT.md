@@ -57,3 +57,28 @@ source (or `.env`-driven), regenerate the seed with fresh fictional passwords,
 and delete `hashPassword.js` in favour of a documented script that reads that
 source. Decide separately whether to rotate the seeded admin password given the
 pushed history.
+
+---
+
+## Legacy ML training path and orphaned files
+
+The forecasting **inference** path is now the v2 pipeline
+(`back-end/ml/`, artifacts in `ml/artifacts/v2/`, see `docs/ML_METHODOLOGY.md`).
+Still outstanding:
+
+1. **`POST /api/training`** still drives the legacy `ml/train.py` /
+   `ml/train_peak_hours.py`, which retrain the unused `models_passages/*.pkl` /
+   `models_peak_hours/*.pkl`. It is admin-only and gated by
+   `DISABLE_DESTRUCTIVE_OPS`, so it is not a security issue, but it is dead
+   weight. It should be removed or repointed at `python -m ml.train_all`.
+2. **Orphaned, still-tracked files:** `models_passages/`, `models_peak_hours/`,
+   `ml/train*.py`, `ml/predict*.py`, `ml/training_data*/`, `ml/input*/`,
+   `ml/results*/`. Kept for now as evidence of the non-reproducibility finding;
+   delete once v2 is accepted.
+3. The v2 dataset is **~2 weeks / 1 002 passages** — the bundled models exist to
+   exercise the integration contract, not to forecast. Given real client data or
+   a client model, `ml.train_all` (or a bundle matching the
+   `{schema_version, pipeline, meta}` contract) produces a replacement artifact
+   that the same API serves unchanged.
+4. `matplotlib==3.9.4` was added to `requirements.txt` for `ml.evaluate_all`
+   plots. It is not imported on the request path.

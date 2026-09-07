@@ -1,0 +1,357 @@
+{
+  "source": {
+    "passages_csv": "ml/data/passages.csv",
+    "tolls_csv": "ml/data/tolls.csv",
+    "how_generated": "verbatim export of the seeded Passages table joined to Toll (db/init/02-data.sql) - see ml/README.md"
+  },
+  "passages": {
+    "rows": 1002,
+    "duplicate_rows": 1,
+    "missing_values": {
+      "timestamp": 0,
+      "tollID": 0,
+      "company": 0,
+      "charge": 0,
+      "date": 0,
+      "hour": 0
+    },
+    "unique_dates": 15,
+    "date_min": "2021-12-31",
+    "date_max": "2022-01-14",
+    "sample_frequency": "irregular event log (one row per passage, minute timestamps)",
+    "distinct_stations_with_passages": 137,
+    "distinct_stations_total": 253,
+    "companies": [
+      "AM",
+      "EG",
+      "GE",
+      "KO",
+      "MO",
+      "NAO",
+      "NO",
+      "OO"
+    ],
+    "dates_with_multiple_stations": 15
+  },
+  "db_cross_check": {
+    "checked": true,
+    "matches_seed_db": true,
+    "db_rows": 1002,
+    "csv_rows": 1002,
+    "db_range": [
+      "2021-12-31 22:23:00",
+      "2022-01-14 21:59:00"
+    ],
+    "csv_range": [
+      "2021-12-31 22:23:00",
+      "2022-01-14 21:59:00"
+    ]
+  },
+  "volume_task": {
+    "per_operator": {
+      "AM": {
+        "grid_rows": 450,
+        "stations": 30,
+        "unique_dates": 15,
+        "target_total_passages": {
+          "count": 450,
+          "min": 0.0,
+          "max": 3.0,
+          "mean": 0.29333333333333333,
+          "median": 0.0,
+          "zeros": 359,
+          "zero_frac": 0.7977777777777778
+        },
+        "raw_passages": 132,
+        "duplicate_rows": 0
+      },
+      "EG": {
+        "grid_rows": 1110,
+        "stations": 74,
+        "unique_dates": 15,
+        "target_total_passages": {
+          "count": 1110,
+          "min": 0.0,
+          "max": 3.0,
+          "mean": 0.2009009009009009,
+          "median": 0.0,
+          "zeros": 929,
+          "zero_frac": 0.8369369369369369
+        },
+        "raw_passages": 223,
+        "duplicate_rows": 0
+      },
+      "GE": {
+        "grid_rows": 30,
+        "stations": 2,
+        "unique_dates": 15,
+        "target_total_passages": {
+          "count": 30,
+          "min": 0.0,
+          "max": 2.0,
+          "mean": 0.4666666666666667,
+          "median": 0.0,
+          "zeros": 21,
+          "zero_frac": 0.7
+        },
+        "raw_passages": 14,
+        "duplicate_rows": 0
+      },
+      "KO": {
+        "grid_rows": 390,
+        "stations": 26,
+        "unique_dates": 15,
+        "target_total_passages": {
+          "count": 390,
+          "min": 0.0,
+          "max": 3.0,
+          "mean": 0.2717948717948718,
+          "median": 0.0,
+          "zeros": 313,
+          "zero_frac": 0.8025641025641026
+        },
+        "raw_passages": 106,
+        "duplicate_rows": 0
+      },
+      "MO": {
+        "grid_rows": 270,
+        "stations": 18,
+        "unique_dates": 15,
+        "target_total_passages": {
+          "count": 270,
+          "min": 0.0,
+          "max": 2.0,
+          "mean": 0.15185185185185185,
+          "median": 0.0,
+          "zeros": 235,
+          "zero_frac": 0.8703703703703703
+        },
+        "raw_passages": 41,
+        "duplicate_rows": 0
+      },
+      "NAO": {
+        "grid_rows": 615,
+        "stations": 41,
+        "unique_dates": 15,
+        "target_total_passages": {
+          "count": 615,
+          "min": 0.0,
+          "max": 4.0,
+          "mean": 0.3821138211382114,
+          "median": 0.0,
+          "zeros": 426,
+          "zero_frac": 0.6926829268292682
+        },
+        "raw_passages": 235,
+        "duplicate_rows": 0
+      },
+      "NO": {
+        "grid_rows": 510,
+        "stations": 34,
+        "unique_dates": 15,
+        "target_total_passages": {
+          "count": 510,
+          "min": 0.0,
+          "max": 3.0,
+          "mean": 0.25882352941176473,
+          "median": 0.0,
+          "zeros": 415,
+          "zero_frac": 0.8137254901960784
+        },
+        "raw_passages": 132,
+        "duplicate_rows": 0
+      },
+      "OO": {
+        "grid_rows": 420,
+        "stations": 28,
+        "unique_dates": 15,
+        "target_total_passages": {
+          "count": 420,
+          "min": 0.0,
+          "max": 4.0,
+          "mean": 0.2833333333333333,
+          "median": 0.0,
+          "zeros": 334,
+          "zero_frac": 0.7952380952380952
+        },
+        "raw_passages": 119,
+        "duplicate_rows": 0
+      }
+    },
+    "notes": [
+      "operators with < 30 passages in the whole sample: ['GE'] - per-station volume and peak-hour models for these are demonstrations only"
+    ]
+  },
+  "peak_task": {
+    "per_operator": {
+      "AM": {
+        "labelled_dates": 15,
+        "dates_with_ties_removed_earliest_kept": 11,
+        "peak_hour_distribution": {
+          "0": 5,
+          "1": 2,
+          "2": 2,
+          "6": 1,
+          "7": 2,
+          "9": 1,
+          "16": 1,
+          "23": 1
+        },
+        "mean_day_total": 8.8,
+        "raw_passages": 132
+      },
+      "EG": {
+        "labelled_dates": 15,
+        "dates_with_ties_removed_earliest_kept": 9,
+        "peak_hour_distribution": {
+          "0": 1,
+          "1": 1,
+          "2": 2,
+          "6": 1,
+          "7": 1,
+          "8": 1,
+          "9": 1,
+          "10": 3,
+          "11": 1,
+          "13": 1,
+          "16": 1,
+          "22": 1
+        },
+        "mean_day_total": 14.866666666666667,
+        "raw_passages": 223
+      },
+      "GE": {
+        "labelled_dates": 15,
+        "dates_with_ties_removed_earliest_kept": 12,
+        "peak_hour_distribution": {
+          "0": 7,
+          "1": 3,
+          "3": 1,
+          "5": 1,
+          "10": 1,
+          "12": 1,
+          "14": 1
+        },
+        "mean_day_total": 0.9333333333333333,
+        "raw_passages": 14
+      },
+      "KO": {
+        "labelled_dates": 15,
+        "dates_with_ties_removed_earliest_kept": 10,
+        "peak_hour_distribution": {
+          "0": 1,
+          "1": 2,
+          "2": 3,
+          "5": 1,
+          "6": 2,
+          "12": 1,
+          "15": 1,
+          "19": 1,
+          "22": 1,
+          "23": 2
+        },
+        "mean_day_total": 7.066666666666666,
+        "raw_passages": 106
+      },
+      "MO": {
+        "labelled_dates": 15,
+        "dates_with_ties_removed_earliest_kept": 11,
+        "peak_hour_distribution": {
+          "0": 3,
+          "1": 2,
+          "2": 1,
+          "3": 2,
+          "5": 1,
+          "7": 1,
+          "8": 1,
+          "11": 1,
+          "14": 1,
+          "19": 1,
+          "20": 1
+        },
+        "mean_day_total": 2.7333333333333334,
+        "raw_passages": 41
+      },
+      "NAO": {
+        "labelled_dates": 15,
+        "dates_with_ties_removed_earliest_kept": 7,
+        "peak_hour_distribution": {
+          "0": 1,
+          "3": 1,
+          "5": 1,
+          "8": 1,
+          "9": 2,
+          "12": 1,
+          "13": 1,
+          "15": 2,
+          "16": 1,
+          "21": 1,
+          "22": 2,
+          "23": 1
+        },
+        "mean_day_total": 15.666666666666666,
+        "raw_passages": 235
+      },
+      "NO": {
+        "labelled_dates": 15,
+        "dates_with_ties_removed_earliest_kept": 7,
+        "peak_hour_distribution": {
+          "2": 3,
+          "3": 1,
+          "4": 1,
+          "8": 1,
+          "9": 1,
+          "12": 1,
+          "15": 3,
+          "16": 1,
+          "19": 1,
+          "22": 1,
+          "23": 1
+        },
+        "mean_day_total": 8.8,
+        "raw_passages": 132
+      },
+      "OO": {
+        "labelled_dates": 15,
+        "dates_with_ties_removed_earliest_kept": 9,
+        "peak_hour_distribution": {
+          "0": 3,
+          "1": 2,
+          "2": 3,
+          "4": 2,
+          "5": 1,
+          "7": 1,
+          "10": 2,
+          "13": 1
+        },
+        "mean_day_total": 7.933333333333334,
+        "raw_passages": 119
+      }
+    },
+    "notes": [
+      "operators with < 30 passages in the whole sample: ['GE'] - per-station volume and peak-hour models for these are demonstrations only"
+    ]
+  },
+  "proposed_split": {
+    "train": {
+      "n": 11,
+      "min": "2021-12-31",
+      "max": "2022-01-10"
+    },
+    "val": {
+      "n": 2,
+      "min": "2022-01-11",
+      "max": "2022-01-12"
+    },
+    "test": {
+      "n": 2,
+      "min": "2022-01-13",
+      "max": "2022-01-14"
+    }
+  },
+  "reproducibility": {
+    "current_committed_models": "models_passages/*.pkl and models_peak_hours/*.pkl",
+    "reproducible_from_this_source": false,
+    "reason": "the legacy training tables (ml/training_data/*.csv, ml/training_data_peak_hours/*.csv) do not match this export or db/init/02-data.sql (different dates and counts); their exact origin is undocumented. The v2 pipeline is built from ml/data/passages.csv only."
+  }
+}

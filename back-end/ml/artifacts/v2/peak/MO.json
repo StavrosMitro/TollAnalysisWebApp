@@ -1,0 +1,96 @@
+{
+  "schema_version": "2.0.0",
+  "model_type": "RandomForestRegressor(n_estimators=120, max_depth=6, min_samples_leaf=3) on 24 hourly volumes -> argmax",
+  "task": "peak_hour",
+  "operator": "MO",
+  "target": "hour of day with most passages (int 0-23)",
+  "feature_names": [
+    "hour",
+    "hour_sin",
+    "hour_cos",
+    "day_of_week",
+    "month",
+    "day_of_year",
+    "is_weekend",
+    "dow_sin",
+    "dow_cos",
+    "doy_sin",
+    "doy_cos"
+  ],
+  "training_data_source": "ml/data/passages.csv (hourly counts per date)",
+  "train_date_range": {
+    "n": 11,
+    "min": "2021-12-31",
+    "max": "2022-01-10"
+  },
+  "val_date_range": {
+    "n": 2,
+    "min": "2022-01-11",
+    "max": "2022-01-12"
+  },
+  "test_date_range": {
+    "n": 2,
+    "min": "2022-01-13",
+    "max": "2022-01-14"
+  },
+  "row_counts": {
+    "train_val_hour_rows": 312,
+    "labelled_dates_total": 15,
+    "mean_day_total": 2.7333333333333334,
+    "raw_passages": 41
+  },
+  "random_seed": 42,
+  "metrics": {
+    "validation_sanity_check": {
+      "exact_acc": 0.0,
+      "within_1_acc": 0.0,
+      "mean_circular_abs_error": 4.0,
+      "n": 2
+    },
+    "held_out_test": "see ml/evaluation/v2/metrics.json (ml.evaluate_all)"
+  },
+  "baseline_metrics": {
+    "validation_sanity_check": {
+      "global_peak_hour_mode": {
+        "exact_acc": 0.0,
+        "within_1_acc": 0.0,
+        "mean_circular_abs_error": 4.0,
+        "n": 2
+      },
+      "day_of_week_peak_hour_mode": {
+        "exact_acc": 0.0,
+        "within_1_acc": 0.0,
+        "mean_circular_abs_error": 8.0,
+        "n": 2
+      }
+    }
+  },
+  "notes": "Integration demo. Very sparse: most days have < 1 passage/hour and several hours tie for the peak; the model exists to exercise the training/serving contract.",
+  "created_at": "2026-09-07T07:51:24.907594+00:00",
+  "library_versions": {
+    "python": "3.11.2",
+    "scikit_learn": "1.6.0",
+    "numpy": "2.2.3",
+    "pandas": "2.2.3",
+    "joblib": "1.4.2"
+  },
+  "provenance": {
+    "git": {
+      "commit": null,
+      "dirty": false
+    },
+    "code_sha256": "0968090b01f164ade6b6b4e31798be84988809ecf1b7f94f52ee65c642b3d387",
+    "data_sha256": {
+      "passages_csv": "e8d6b5f3722eada80fccafddf049809492b9f0e0a84e80ff1c64f825c36cde5c",
+      "tolls_csv": "8a94b70444ab8d24802dacc19e862fea103a9afcfc13caadc27cff115ea358e0"
+    },
+    "library_versions": {
+      "python": "3.11.2",
+      "scikit_learn": "1.6.0",
+      "numpy": "2.2.3",
+      "pandas": "2.2.3",
+      "joblib": "1.4.2"
+    },
+    "created_at": "2026-09-07T07:51:24.908718+00:00"
+  }
+}

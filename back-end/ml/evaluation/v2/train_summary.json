@@ -1,0 +1,426 @@
+{
+  "provenance": {
+    "git": {
+      "commit": null,
+      "dirty": false
+    },
+    "code_sha256": "0968090b01f164ade6b6b4e31798be84988809ecf1b7f94f52ee65c642b3d387",
+    "data_sha256": {
+      "passages_csv": "e8d6b5f3722eada80fccafddf049809492b9f0e0a84e80ff1c64f825c36cde5c",
+      "tolls_csv": "8a94b70444ab8d24802dacc19e862fea103a9afcfc13caadc27cff115ea358e0"
+    },
+    "library_versions": {
+      "python": "3.11.2",
+      "scikit_learn": "1.6.0",
+      "numpy": "2.2.3",
+      "pandas": "2.2.3",
+      "joblib": "1.4.2"
+    },
+    "created_at": "2026-09-07T07:51:27.803156+00:00"
+  },
+  "version": "v2",
+  "seed": 42,
+  "split": {
+    "train": {
+      "n": 11,
+      "min": "2021-12-31",
+      "max": "2022-01-10"
+    },
+    "val": {
+      "n": 2,
+      "min": "2022-01-11",
+      "max": "2022-01-12"
+    },
+    "test": {
+      "n": 2,
+      "min": "2022-01-13",
+      "max": "2022-01-14"
+    }
+  },
+  "operators": {
+    "AM": {
+      "raw_passages": 132,
+      "demonstration_only": false,
+      "volume": {
+        "val": {
+          "mae": 0.3101806627304452,
+          "rmse": 0.6043310084298377,
+          "smape": 112.98565092771886,
+          "n": 60
+        },
+        "val_baselines": {
+          "global_mean": {
+            "mae": 0.4861616161616161,
+            "rmse": 0.7371363946239226,
+            "smape": 186.7599292635552,
+            "n": 60
+          },
+          "per_station_mean": {
+            "mae": 0.25757575757575757,
+            "rmse": 0.5961307749365454,
+            "smape": 113.90989974937345,
+            "n": 60
+          }
+        }
+      },
+      "peak": {
+        "val": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 6.0,
+          "n": 2
+        },
+        "val_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 1.0,
+            "within_1_acc": 1.0,
+            "mean_circular_abs_error": 0.0,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 1.5,
+            "n": 2
+          }
+        }
+      }
+    },
+    "EG": {
+      "raw_passages": 223,
+      "demonstration_only": false,
+      "volume": {
+        "val": {
+          "mae": 0.3395259628989568,
+          "rmse": 0.5445048381950275,
+          "smape": 155.76696299616117,
+          "n": 148
+        },
+        "val_baselines": {
+          "global_mean": {
+            "mae": 0.3556345042831529,
+            "rmse": 0.5597842139466949,
+            "smape": 189.92856581086022,
+            "n": 148
+          },
+          "per_station_mean": {
+            "mae": 0.30221130221130216,
+            "rmse": 0.5369941739983753,
+            "smape": 171.32486069039916,
+            "n": 148
+          }
+        }
+      },
+      "peak": {
+        "val": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.5,
+          "mean_circular_abs_error": 1.5,
+          "n": 2
+        },
+        "val_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 1.5,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 4.5,
+            "n": 2
+          }
+        }
+      }
+    },
+    "GE": {
+      "raw_passages": 14,
+      "demonstration_only": true,
+      "volume": {
+        "val": {
+          "mae": 0.43427414021164024,
+          "rmse": 0.5161527736264717,
+          "smape": 152.66062487948562,
+          "n": 4
+        },
+        "val_baselines": {
+          "global_mean": {
+            "mae": 0.4772727272727273,
+            "rmse": 0.47889335240239717,
+            "smape": 168.75,
+            "n": 4
+          },
+          "per_station_mean": {
+            "mae": 0.34090909090909094,
+            "rmse": 0.40909090909090906,
+            "smape": 157.89473684210526,
+            "n": 4
+          }
+        }
+      },
+      "peak": {
+        "val": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 4.5,
+          "n": 2
+        },
+        "val_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.5,
+            "within_1_acc": 1.0,
+            "mean_circular_abs_error": 0.5,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 2.5,
+            "n": 2
+          }
+        }
+      }
+    },
+    "KO": {
+      "raw_passages": 106,
+      "demonstration_only": false,
+      "volume": {
+        "val": {
+          "mae": 0.2791886631603821,
+          "rmse": 0.5729161186171335,
+          "smape": 115.71066613643434,
+          "n": 52
+        },
+        "val_baselines": {
+          "global_mean": {
+            "mae": 0.48359332974717606,
+            "rmse": 0.7364021533435182,
+            "smape": 184.5390910830113,
+            "n": 52
+          },
+          "per_station_mean": {
+            "mae": 0.2692307692307692,
+            "rmse": 0.5618175028850538,
+            "smape": 117.21325405006519,
+            "n": 52
+          }
+        }
+      },
+      "peak": {
+        "val": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 5.5,
+          "n": 2
+        },
+        "val_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 5.5,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 3.5,
+            "n": 2
+          }
+        }
+      }
+    },
+    "MO": {
+      "raw_passages": 41,
+      "demonstration_only": false,
+      "volume": {
+        "val": {
+          "mae": 0.2659080905703124,
+          "rmse": 0.34622925649620223,
+          "smape": 182.87897805333756,
+          "n": 36
+        },
+        "val_baselines": {
+          "global_mean": {
+            "mae": 0.2264309764309764,
+            "rmse": 0.29017338226713585,
+            "smape": 195.1149425287356,
+            "n": 36
+          },
+          "per_station_mean": {
+            "mae": 0.1792929292929293,
+            "rmse": 0.25034411578573185,
+            "smape": 184.375,
+            "n": 36
+          }
+        }
+      },
+      "peak": {
+        "val": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 4.0,
+          "n": 2
+        },
+        "val_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 4.0,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 8.0,
+            "n": 2
+          }
+        }
+      }
+    },
+    "NAO": {
+      "raw_passages": 235,
+      "demonstration_only": false,
+      "volume": {
+        "val": {
+          "mae": 0.5198156383663809,
+          "rmse": 0.6068318373900364,
+          "smape": 162.0535155261287,
+          "n": 82
+        },
+        "val_baselines": {
+          "global_mean": {
+            "mae": 0.5097615055973176,
+            "rmse": 0.6000681701612447,
+            "smape": 164.5239692670906,
+            "n": 82
+          },
+          "per_station_mean": {
+            "mae": 0.5099778270509977,
+            "rmse": 0.6264672356470418,
+            "smape": 165.41773745145338,
+            "n": 82
+          }
+        }
+      },
+      "peak": {
+        "val": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 8.5,
+          "n": 2
+        },
+        "val_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 6.5,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 9.5,
+            "n": 2
+          }
+        }
+      }
+    },
+    "NO": {
+      "raw_passages": 132,
+      "demonstration_only": false,
+      "volume": {
+        "val": {
+          "mae": 0.33447331166995947,
+          "rmse": 0.6065993011401953,
+          "smape": 129.51661157238465,
+          "n": 68
+        },
+        "val_baselines": {
+          "global_mean": {
+            "mae": 0.41955017301038067,
+            "rmse": 0.6034197206905434,
+            "smape": 187.71257324410908,
+            "n": 68
+          },
+          "per_station_mean": {
+            "mae": 0.30080213903743314,
+            "rmse": 0.5775958083656051,
+            "smape": 147.07185562397004,
+            "n": 68
+          }
+        }
+      },
+      "peak": {
+        "val": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.5,
+          "mean_circular_abs_error": 3.5,
+          "n": 2
+        },
+        "val_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 11.5,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 3.5,
+            "n": 2
+          }
+        }
+      }
+    },
+    "OO": {
+      "raw_passages": 119,
+      "demonstration_only": false,
+      "volume": {
+        "val": {
+          "mae": 0.26335139378925393,
+          "rmse": 0.5507751264355288,
+          "smape": 120.99249438000058,
+          "n": 56
+        },
+        "val_baselines": {
+          "global_mean": {
+            "mae": 0.45918367346938765,
+            "rmse": 0.6468132241526726,
+            "smape": 185.58919944789508,
+            "n": 56
+          },
+          "per_station_mean": {
+            "mae": 0.2792207792207792,
+            "rmse": 0.5841269128324421,
+            "smape": 121.30239235692473,
+            "n": 56
+          }
+        }
+      },
+      "peak": {
+        "val": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 7.0,
+          "n": 2
+        },
+        "val_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 5.0,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 6.5,
+            "n": 2
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,101 +1,83 @@
 /**
- * peak_hour.test.js
- *
- * A single-file, self-contained test for an Express route
- * that handles peak-hour predictions. No external modules
- * or code changes required—just run with Jest.
+ * /api/peak_hour — peak-hour prediction route (the real router this time).
+ * The Python inference bridge is mocked; no real model runs.
  */
-
 const request = require('supertest');
 const express = require('express');
+const jwt = require('jsonwebtoken');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// ----------------------
-// Minimal Express "app"
-// ----------------------
-const app = express();
-
-/**
- * Example GET route:
- *   /api/peak_hour/:company_id?/:DateFrom?/:DateTo?
- *
- * - If any param is missing => 400
- * - If date format is invalid => 400
- * - If company == 'ZZ' => pretend we have no data => 404 + JSON error
- * - Otherwise => pretend we have data => 200 + JSON array
- */
-app.get('/api/peak_hour/:company_id?/:DateFrom?/:DateTo?', (req, res) => {
-  const { company_id, DateFrom, DateTo } = req.params;
-
-  // 1) Missing parameters => 400
-  if (!company_id || !DateFrom || !DateTo) {
-    return res.status(400).json({ error: 'Missing required parameters' });
+jest.mock('../dbService.js', () => ({ getDbServiceInstance: jest.fn() }));
+jest.mock('../lib/mlInference', () => {
+  class InferenceError extends Error {
+    constructor(code, message, httpStatus = 500) {
+      super(message);
+      this.code = code;
+      this.httpStatus = httpStatus;
+    }
   }
-
-  // 2) Invalid date format => 400
-  const isValidDate = (dateStr) => /^\d{8}$/.test(dateStr);
-  if (!isValidDate(DateFrom) || !isValidDate(DateTo)) {
-    return res.status(400).json({ error: 'Invalid date format. Use YYYYMMDD.' });
-  }
-
-  // 3) No data found => 404
-  // For illustration, if company_id is 'ZZ', we pretend no data exists
-  if (company_id === 'ZZ') {
-    return res.status(404).json({ error: 'No data found for the company' });
-  }
-
-  // 4) Valid => return "predictions"
-  return res.status(200).json([
-    {
-      passage_date: '2021-01-01 00:00:00',
-      peak_prediction: 42,
-    },
-  ]);
+  return { forecastVolume: jest.fn(), predictPeakHours: jest.fn(), InferenceError };
 });
 
-// ----------------------
-// Jest Test Suite
-// ----------------------
-describe('Peak Controller API', () => {
-  /**
-   * SCENARIO 1: Missing parameters => 400
-   */
-  it('should return 400 when required parameters are missing', async () => {
-    const response = await request(app).get('/api/peak_hour');
-    expect(response.statusCode).toBe(400);
-    expect(response.body).toHaveProperty('error', 'Missing required parameters');
+const { predictPeakHours, InferenceError } = require('../lib/mlInference');
+const peakRouter = require('../routers/peak_hour_router');
+
+const app = express();
+app.use(express.json());
+app.use('/api/peak_hour', peakRouter);
+
+let token;
+beforeAll(() => {
+  token = jwt.sign({ user_email: 'admin@yme.gov.gr', user_role: 'admin' },
+    process.env.JWT_SECRET || 'mySuperSecretKey', { expiresIn: '1h' });
+});
+beforeEach(() => jest.clearAllMocks());
+
+const OK_RESULT = {
+  task: 'peak_hour', operator: 'NAO',
+  predictions: [
+    { passage_date: '2022-01-13', company: 'NAO', predicted_hour: 0 },
+    { passage_date: '2022-01-14', company: 'NAO', predicted_hour: 12 },
+  ],
+  model: { artifact_version: 'v2' },
+  evaluation: { within_1_hour_accuracy: 0.5, mean_circular_abs_error_hours: 3.0, sanity_check_baseline: { name: "global_peak_hour_mode" } },
+  limitations: 'very sparse sample',
+};
+
+describe('GET /api/peak_hour/:company_id/:DateFrom/:DateTo', () => {
+  it('400 when a date is missing', async () => {
+    const res = await request(app).get('/api/peak_hour/NAO/20220113').set('x-observatory-auth', token);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('MISSING_PARAMS');
   });
 
-  /**
-   * SCENARIO 2: Invalid date format => 400
-   */
-  it('should return 400 for invalid date format', async () => {
-    // The route expects YYYYMMDD, so we try "2021-01-01"
-    const response = await request(app).get('/api/peak_hour/AM/2021-01-01/20210107');
-    expect(response.statusCode).toBe(400);
-    expect(response.body).toHaveProperty('error', 'Invalid date format. Use YYYYMMDD.');
+  it('400 on a non-YYYYMMDD date', async () => {
+    const res = await request(app).get('/api/peak_hour/NAO/2022-01-13/20220114').set('x-observatory-auth', token);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('BAD_DATE');
+    expect(predictPeakHours).not.toHaveBeenCalled();
   });
 
-  /**
-   * SCENARIO 3: No data => 404
-   */
-  it('should return 404 if no data found for the company', async () => {
-    // 'ZZ' is our placeholder "no data" company
-    const response = await request(app).get('/api/peak_hour/ZZ/20210101/20210107');
-    expect(response.statusCode).toBe(404);
-    expect(response.body).toHaveProperty('error', 'No data found for the company');
+  it('propagates an inference error status (e.g. unknown operator -> 400)', async () => {
+    predictPeakHours.mockRejectedValueOnce(new InferenceError('UNKNOWN_OPERATOR', "operator 'ZZ' is not supported", 400));
+    const res = await request(app).get('/api/peak_hour/ZZ/20220113/20220114').set('x-observatory-auth', token);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('UNKNOWN_OPERATOR');
   });
 
-  /**
-   * SCENARIO 4: Return 200 + predicted data
-   */
-  it('should return 200 and a JSON array with predicted data for a valid request', async () => {
-    const response = await request(app).get('/api/peak_hour/AM/20210101/20210107?format=json');
-    expect(response.statusCode).toBe(200);
-    expect(Array.isArray(response.body)).toBe(true);
-
-    if (response.body.length > 0) {
-      expect(response.body[0]).toHaveProperty('passage_date');
-      expect(response.body[0]).toHaveProperty('peak_prediction');
-    }
+  it('200 with an integer-hour predictions array + model + evaluation', async () => {
+    predictPeakHours.mockResolvedValueOnce(OK_RESULT);
+    const res = await request(app).get('/api/peak_hour/NAO/20220113/20220114').set('x-observatory-auth', token);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.predictions)).toBe(true);
+    res.body.predictions.forEach((p) => {
+      expect(Number.isInteger(p.predicted_hour)).toBe(true);
+      expect(p.predicted_hour).toBeGreaterThanOrEqual(0);
+      expect(p.predicted_hour).toBeLessThanOrEqual(23);
+    });
+    expect(res.body.model.artifact_version).toBe('v2');
+    expect(res.body.evaluation).toHaveProperty('mean_circular_abs_error_hours');
+    expect(predictPeakHours).toHaveBeenCalledWith('NAO', '2022-01-13', '2022-01-14');
   });
 });

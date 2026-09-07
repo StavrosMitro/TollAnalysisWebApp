@@ -1,0 +1,9 @@
+operator,model_exact_acc,model_within_1_acc,model_mean_circular_abs_error,model_n,baseline_global_peak_hour_mode_exact_acc,baseline_global_peak_hour_mode_within_1_acc,baseline_global_peak_hour_mode_mean_circular_abs_error,baseline_global_peak_hour_mode_n,baseline_day_of_week_peak_hour_mode_exact_acc,baseline_day_of_week_peak_hour_mode_within_1_acc,baseline_day_of_week_peak_hour_mode_mean_circular_abs_error,baseline_day_of_week_peak_hour_mode_n
+AM,0.5,0.5,2.0,2,0.5,0.5,4.0,2,0.5,0.5,5.0,2
+EG,0.0,0.0,7.0,2,0.5,0.5,4.0,2,0.5,0.5,1.0,2
+GE,0.0,0.5,6.0,2,0.5,0.5,6.0,2,0.5,0.5,6.0,2
+KO,0.0,0.0,8.5,2,0.0,0.5,3.5,2,0.0,0.0,5.0,2
+MO,0.0,0.0,2.5,2,0.0,0.5,2.5,2,0.0,0.5,5.0,2
+NAO,0.0,0.5,5.0,2,0.0,0.0,11.0,2,0.0,0.5,6.5,2
+NO,0.0,0.0,5.0,2,0.0,0.5,6.0,2,0.0,0.0,4.0,2
+OO,0.5,0.5,1.5,2,0.0,0.0,8.5,2,0.0,0.0,8.0,2

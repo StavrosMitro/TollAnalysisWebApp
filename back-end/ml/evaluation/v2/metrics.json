@@ -1,0 +1,485 @@
+{
+  "version": "v2",
+  "random_seed": 42,
+  "provenance": {
+    "git": {
+      "commit": null,
+      "dirty": false
+    },
+    "code_sha256": "0968090b01f164ade6b6b4e31798be84988809ecf1b7f94f52ee65c642b3d387",
+    "data_sha256": {
+      "passages_csv": "e8d6b5f3722eada80fccafddf049809492b9f0e0a84e80ff1c64f825c36cde5c",
+      "tolls_csv": "8a94b70444ab8d24802dacc19e862fea103a9afcfc13caadc27cff115ea358e0"
+    },
+    "library_versions": {
+      "python": "3.11.2",
+      "scikit_learn": "1.6.0",
+      "numpy": "2.2.3",
+      "pandas": "2.2.3",
+      "joblib": "1.4.2"
+    },
+    "created_at": "2026-09-07T07:51:30.858261+00:00"
+  },
+  "purpose": "Integration demo. This step measures the shipped artifacts on the held-out dates for reproducibility; the baselines are sanity checks, not a target. No selection or tuning happens here.",
+  "evaluation": "single held-out chronological TEST split; no retraining; baselines fit on TRAIN+VAL",
+  "split": {
+    "train": {
+      "n": 11,
+      "min": "2021-12-31",
+      "max": "2022-01-10"
+    },
+    "val": {
+      "n": 2,
+      "min": "2022-01-11",
+      "max": "2022-01-12"
+    },
+    "test": {
+      "n": 2,
+      "min": "2022-01-13",
+      "max": "2022-01-14"
+    }
+  },
+  "volume": {
+    "per_company": {
+      "AM": {
+        "model": {
+          "mae": 0.21936348101489536,
+          "rmse": 0.4492045410352205,
+          "smape": 89.95604747106093,
+          "n": 60
+        },
+        "sanity_check_baselines": {
+          "global_mean": {
+            "mae": 0.44059829059829064,
+            "rmse": 0.5506257273777081,
+            "smape": 180.73049763076867,
+            "n": 60
+          },
+          "per_station_mean": {
+            "mae": 0.17564102564102563,
+            "rmse": 0.3883155348876845,
+            "smape": 85.24076870764519,
+            "n": 60
+          }
+        },
+        "model_on_nonzero_actuals": {
+          "mae": 0.5007322591764293,
+          "rmse": 0.6042354346775961,
+          "smape": 42.794353530087044,
+          "n": 14
+        },
+        "test_zero_frac": 0.7666666666666667
+      },
+      "EG": {
+        "model": {
+          "mae": 0.2730066103642445,
+          "rmse": 0.4440280251874433,
+          "smape": 164.05833259115175,
+          "n": 148
+        },
+        "sanity_check_baselines": {
+          "global_mean": {
+            "mae": 0.33891948081137274,
+            "rmse": 0.4829609535227274,
+            "smape": 189.33075583110147,
+            "n": 148
+          },
+          "per_station_mean": {
+            "mae": 0.275987525987526,
+            "rmse": 0.46674985741175207,
+            "smape": 165.822114173286,
+            "n": 148
+          }
+        },
+        "model_on_nonzero_actuals": {
+          "mae": 0.792075572709649,
+          "rmse": 0.8960767990376821,
+          "smape": 94.93974142028982,
+          "n": 26
+        },
+        "test_zero_frac": 0.8243243243243243
+      },
+      "GE": {
+        "model": {
+          "mae": 0.7667774470899471,
+          "rmse": 1.0346749610934272,
+          "smape": 171.68223811572614,
+          "n": 4
+        },
+        "sanity_check_baselines": {
+          "global_mean": {
+            "mae": 0.75,
+            "rmse": 0.8912792481735744,
+            "smape": 152.8099528099528,
+            "n": 4
+          },
+          "per_station_mean": {
+            "mae": 0.75,
+            "rmse": 1.0007393716352067,
+            "smape": 151.94805194805195,
+            "n": 4
+          }
+        },
+        "model_on_nonzero_actuals": {
+          "mae": 1.2971279761904762,
+          "rmse": 1.4351354432673769,
+          "smape": 143.36447623145227,
+          "n": 2
+        },
+        "test_zero_frac": 0.5
+      },
+      "KO": {
+        "model": {
+          "mae": 0.24694732437488962,
+          "rmse": 0.47323798665392103,
+          "smape": 101.9148537297577,
+          "n": 52
+        },
+        "sanity_check_baselines": {
+          "global_mean": {
+            "mae": 0.43343195266272194,
+            "rmse": 0.5665738408713937,
+            "smape": 182.5767452886097,
+            "n": 52
+          },
+          "per_station_mean": {
+            "mae": 0.23816568047337278,
+            "rmse": 0.4687552154162903,
+            "smape": 113.26193497577935,
+            "n": 52
+          }
+        },
+        "model_on_nonzero_actuals": {
+          "mae": 0.4490156138727038,
+          "rmse": 0.6183192786531146,
+          "smape": 36.52475621626283,
+          "n": 12
+        },
+        "test_zero_frac": 0.7692307692307693
+      },
+      "MO": {
+        "model": {
+          "mae": 0.18427273955297652,
+          "rmse": 0.3991765842280774,
+          "smape": 195.48250423620524,
+          "n": 36
+        },
+        "sanity_check_baselines": {
+          "global_mean": {
+            "mae": 0.2428774928774928,
+            "rmse": 0.39563972392338936,
+            "smape": 196.15188825155576,
+            "n": 36
+          },
+          "per_station_mean": {
+            "mae": 0.23931623931623935,
+            "rmse": 0.42327112869792766,
+            "smape": 193.4623015873016,
+            "n": 36
+          }
+        },
+        "model_on_nonzero_actuals": {
+          "mae": 1.215981903254532,
+          "rmse": 1.310445917712591,
+          "smape": 163.8600338896417,
+          "n": 3
+        },
+        "test_zero_frac": 0.9166666666666666
+      },
+      "NAO": {
+        "model": {
+          "mae": 0.5595389476100603,
+          "rmse": 0.7075790916534023,
+          "smape": 173.66568593166437,
+          "n": 82
+        },
+        "sanity_check_baselines": {
+          "global_mean": {
+            "mae": 0.5595799203770648,
+            "rmse": 0.6963722415192091,
+            "smape": 172.5630205923851,
+            "n": 82
+          },
+          "per_station_mean": {
+            "mae": 0.5581613508442776,
+            "rmse": 0.7105680213564746,
+            "smape": 173.43699431112353,
+            "n": 82
+          }
+        },
+        "model_on_nonzero_actuals": {
+          "mae": 1.0145767458557498,
+          "rmse": 1.170205693122592,
+          "smape": 110.0244269331866,
+          "n": 24
+        },
+        "test_zero_frac": 0.7073170731707317
+      },
+      "NO": {
+        "model": {
+          "mae": 0.26830914624515356,
+          "rmse": 0.5267796881418566,
+          "smape": 157.61069628804822,
+          "n": 68
+        },
+        "sanity_check_baselines": {
+          "global_mean": {
+            "mae": 0.41835240883683794,
+            "rmse": 0.5785001955040949,
+            "smape": 188.1128356152118,
+            "n": 68
+          },
+          "per_station_mean": {
+            "mae": 0.2839366515837104,
+            "rmse": 0.512547061331987,
+            "smape": 145.7610165364014,
+            "n": 68
+          }
+        },
+        "model_on_nonzero_actuals": {
+          "mae": 0.9579366201522811,
+          "rmse": 1.1251775990941182,
+          "smape": 101.09162467211242,
+          "n": 12
+        },
+        "test_zero_frac": 0.8235294117647058
+      },
+      "OO": {
+        "model": {
+          "mae": 0.28597062946599533,
+          "rmse": 0.5335956994489264,
+          "smape": 125.12261608255491,
+          "n": 56
+        },
+        "sanity_check_baselines": {
+          "global_mean": {
+            "mae": 0.4515306122448979,
+            "rmse": 0.6123724356957946,
+            "smape": 187.59920634920633,
+            "n": 56
+          },
+          "per_station_mean": {
+            "mae": 0.2596153846153846,
+            "rmse": 0.4842183966159297,
+            "smape": 126.19158865543304,
+            "n": 56
+          }
+        },
+        "model_on_nonzero_actuals": {
+          "mae": 0.6621739654293008,
+          "rmse": 0.8377012069038515,
+          "smape": 50.24523216510982,
+          "n": 10
+        },
+        "test_zero_frac": 0.8214285714285714
+      }
+    },
+    "aggregate": {
+      "macro": {
+        "mae": 0.3505232907147703,
+        "rmse": 0.5710345721802843,
+        "smape": 147.43662180577115,
+        "n_companies": 8
+      },
+      "weighted": {
+        "mae": 0.30879554816868426,
+        "rmse": 0.5128650510885541,
+        "smape": 147.56254479303288,
+        "n": 506
+      }
+    }
+  },
+  "peak_hour": {
+    "per_company": {
+      "AM": {
+        "model": {
+          "exact_acc": 0.5,
+          "within_1_acc": 0.5,
+          "mean_circular_abs_error": 2.0,
+          "n": 2
+        },
+        "sanity_check_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.5,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 4.0,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.5,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 5.0,
+            "n": 2
+          }
+        }
+      },
+      "EG": {
+        "model": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 7.0,
+          "n": 2
+        },
+        "sanity_check_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.5,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 4.0,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.5,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 1.0,
+            "n": 2
+          }
+        }
+      },
+      "GE": {
+        "model": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.5,
+          "mean_circular_abs_error": 6.0,
+          "n": 2
+        },
+        "sanity_check_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.5,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 6.0,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.5,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 6.0,
+            "n": 2
+          }
+        }
+      },
+      "KO": {
+        "model": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 8.5,
+          "n": 2
+        },
+        "sanity_check_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 3.5,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 5.0,
+            "n": 2
+          }
+        }
+      },
+      "MO": {
+        "model": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 2.5,
+          "n": 2
+        },
+        "sanity_check_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 2.5,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 5.0,
+            "n": 2
+          }
+        }
+      },
+      "NAO": {
+        "model": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.5,
+          "mean_circular_abs_error": 5.0,
+          "n": 2
+        },
+        "sanity_check_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 11.0,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 6.5,
+            "n": 2
+          }
+        }
+      },
+      "NO": {
+        "model": {
+          "exact_acc": 0.0,
+          "within_1_acc": 0.0,
+          "mean_circular_abs_error": 5.0,
+          "n": 2
+        },
+        "sanity_check_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.5,
+            "mean_circular_abs_error": 6.0,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 4.0,
+            "n": 2
+          }
+        }
+      },
+      "OO": {
+        "model": {
+          "exact_acc": 0.5,
+          "within_1_acc": 0.5,
+          "mean_circular_abs_error": 1.5,
+          "n": 2
+        },
+        "sanity_check_baselines": {
+          "global_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 8.5,
+            "n": 2
+          },
+          "day_of_week_peak_hour_mode": {
+            "exact_acc": 0.0,
+            "within_1_acc": 0.0,
+            "mean_circular_abs_error": 8.0,
+            "n": 2
+          }
+        }
+      }
+    },
+    "aggregate": {
+      "macro": {
+        "exact_acc": 0.125,
+        "within_1_acc": 0.25,
+        "mean_circular_abs_error": 4.6875,
+        "n_companies": 8
+      }
+    }
+  },
+  "plots": {
+    "made": true,
+    "dir": "ml/evaluation/v2/plots"
+  },
+  "caveat": "TEST = 2 dates inside a ~2-week sample. These numbers show the integration works end to end; they are not evidence of predictive skill and are not comparable to the legacy figures (different target population and evaluation)."
+}

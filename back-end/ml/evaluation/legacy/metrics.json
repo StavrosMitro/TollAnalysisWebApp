@@ -1,0 +1,393 @@
+{
+  "purpose": "record the existing ML approach's behaviour and its methodology problems before replacement",
+  "not_comparable_with_v2": "different target population (legacy = non-zero station-days only) and evaluation; this is not a comparison of accuracy",
+  "random_seed": 42,
+  "library_versions": {
+    "python": "3.11.2",
+    "scikit_learn": "1.6.0",
+    "numpy": "2.2.3",
+    "pandas": "2.2.3",
+    "joblib": "1.4.2"
+  },
+  "data_source": "ml/data/passages.csv (seeded Passages, 2021-12-31..2022-01-14)",
+  "legacy_feature_sets": {
+    "volume": [
+      "tollID(LabelEncoded)",
+      "Year",
+      "Month",
+      "Day",
+      "DayOfYear"
+    ],
+    "peak_hour": [
+      "day_of_week",
+      "month",
+      "year"
+    ]
+  },
+  "chronological_test_dates": [
+    "2022-01-13",
+    "2022-01-14"
+  ],
+  "volume": {
+    "random_split": {
+      "AM": {
+        "mae": 0.42894736842105263,
+        "rmse": 0.5245097962057425,
+        "smape": 29.95628568472797,
+        "n": 19
+      },
+      "EG": {
+        "mae": 0.44972972972972974,
+        "rmse": 0.5674742523031571,
+        "smape": 32.456552784798085,
+        "n": 37
+      },
+      "KO": {
+        "mae": 0.5293749999999999,
+        "rmse": 0.6799494466502639,
+        "smape": 34.346071332729906,
+        "n": 16
+      },
+      "MO": {
+        "mae": 0.39999999999999997,
+        "rmse": 0.45585085280165916,
+        "smape": 31.90394559997398,
+        "n": 7
+      },
+      "NAO": {
+        "mae": 0.40868421052631587,
+        "rmse": 0.6277256356755,
+        "smape": 27.866770076976966,
+        "n": 38
+      },
+      "NO": {
+        "mae": 0.5905263157894737,
+        "rmse": 0.8563324489693794,
+        "smape": 36.73508034073592,
+        "n": 19
+      },
+      "OO": {
+        "mae": 0.46666666666666656,
+        "rmse": 0.5552476924760696,
+        "smape": 34.361437526279715,
+        "n": 18
+      }
+    },
+    "chronological_split": {
+      "AM": {
+        "mae": 0.6228571428571428,
+        "rmse": 0.8206965682533693,
+        "smape": 39.40933904001836,
+        "n": 14
+      },
+      "EG": {
+        "mae": 0.3357692307692307,
+        "rmse": 0.5067354035695248,
+        "smape": 23.60696706219951,
+        "n": 26
+      },
+      "KO": {
+        "mae": 0.7558333333333334,
+        "rmse": 0.9195968319504659,
+        "smape": 46.89304182722563,
+        "n": 12
+      },
+      "MO": {
+        "mae": 0.5,
+        "rmse": 0.609644705272396,
+        "smape": 36.184528456191224,
+        "n": 3
+      },
+      "NAO": {
+        "mae": 0.4633333333333334,
+        "rmse": 0.6940821277053603,
+        "smape": 30.338504367194854,
+        "n": 24
+      },
+      "NO": {
+        "mae": 0.3508333333333334,
+        "rmse": 0.43084219849035216,
+        "smape": 24.120245971081598,
+        "n": 12
+      },
+      "OO": {
+        "mae": 0.542,
+        "rmse": 0.6818944199801023,
+        "smape": 35.203785597536395,
+        "n": 10
+      }
+    },
+    "shipped_artifacts_on_test": {
+      "AM": {
+        "mae": 0.5357142857142857,
+        "rmse": 0.6772001181334806,
+        "smape": 36.369498181080935,
+        "n": 14
+      },
+      "EG": {
+        "mae": 0.31846153846153846,
+        "rmse": 0.4776867335237764,
+        "smape": 22.94471793633465,
+        "n": 26
+      },
+      "GE": {
+        "mae": 0.405,
+        "rmse": 0.4269074841227312,
+        "smape": 28.498448417808365,
+        "n": 2
+      },
+      "KO": {
+        "mae": 0.465,
+        "rmse": 0.5495149376192304,
+        "smape": 33.12848195526291,
+        "n": 12
+      },
+      "MO": {
+        "mae": 0.43999999999999995,
+        "rmse": 0.502858495669176,
+        "smape": 30.782438244179627,
+        "n": 3
+      },
+      "NAO": {
+        "mae": 0.4091666666666667,
+        "rmse": 0.6259858890848365,
+        "smape": 27.11189419039356,
+        "n": 24
+      },
+      "NO": {
+        "mae": 0.4416666666666666,
+        "rmse": 0.5880334457608115,
+        "smape": 27.77345838773301,
+        "n": 12
+      },
+      "OO": {
+        "mae": 0.491,
+        "rmse": 0.564986725507777,
+        "smape": 33.901990214642375,
+        "n": 10
+      }
+    },
+    "random_split_aggregate": {
+      "macro": {
+        "mae": 0.4677041844476055,
+        "rmse": 0.6095843035831103,
+        "smape": 32.518020478031794,
+        "n_companies": 7
+      },
+      "weighted": {
+        "mae": 0.46240259740259737,
+        "rmse": 0.6178618813623261,
+        "smape": 31.93724874313636,
+        "n": 154
+      }
+    },
+    "chronological_split_aggregate": {
+      "macro": {
+        "mae": 0.5100894819466248,
+        "rmse": 0.6662131793173672,
+        "smape": 33.67948747449251,
+        "n_companies": 7
+      },
+      "weighted": {
+        "mae": 0.4828712871287129,
+        "rmse": 0.6552078237048662,
+        "smape": 31.746404850631134,
+        "n": 101
+      }
+    }
+  },
+  "peak_hour": {
+    "random_split": {
+      "AM": {
+        "mae": 6.581927858916365,
+        "rmse": 7.801591943682111,
+        "smape": 77.00446094280754,
+        "n": 14,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.07142857142857142,
+        "mean_circular_abs_error": 6.285714285714286,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "EG": {
+        "mae": 5.145966080216078,
+        "rmse": 6.756118676336041,
+        "smape": 48.450651162097735,
+        "n": 6,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.16666666666666666,
+        "mean_circular_abs_error": 4.833333333333333,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "GE": {
+        "mae": 5.480111111111113,
+        "rmse": 5.895163571694772,
+        "smape": 72.88155824814243,
+        "n": 3,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.0,
+        "mean_circular_abs_error": 5.666666666666667,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "KO": {
+        "mae": 7.216536742733531,
+        "rmse": 8.126026944422364,
+        "smape": 56.515732963153454,
+        "n": 12,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.08333333333333333,
+        "mean_circular_abs_error": 7.25,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "MO": {
+        "mae": 6.626053576053576,
+        "rmse": 7.217600860017473,
+        "smape": 60.20553707040593,
+        "n": 6,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.0,
+        "mean_circular_abs_error": 6.5,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "NAO": {
+        "mae": 6.916838095238097,
+        "rmse": 8.14669844214552,
+        "smape": 56.00188731105087,
+        "n": 5,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.2,
+        "mean_circular_abs_error": 6.2,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "NO": {
+        "mae": 6.723637506012506,
+        "rmse": 7.884411642816324,
+        "smape": 48.309617867313754,
+        "n": 6,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.16666666666666666,
+        "mean_circular_abs_error": 7.0,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "OO": {
+        "mae": 5.608993475660142,
+        "rmse": 7.218735995036475,
+        "smape": 89.33421980154439,
+        "n": 9,
+        "exact_acc": 0.1111111111111111,
+        "within_1_acc": 0.3333333333333333,
+        "mean_circular_abs_error": 5.777777777777778,
+        "note": "raw fractional hour output; circular metrics use round()"
+      }
+    },
+    "chronological_split": {
+      "AM": {
+        "mae": 4.987405122655123,
+        "rmse": 6.004742758747799,
+        "smape": 50.571107542079005,
+        "n": 10,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.1,
+        "mean_circular_abs_error": 5.2,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "EG": {
+        "mae": 7.433375,
+        "rmse": 9.033689361449545,
+        "smape": 68.78244466877777,
+        "n": 4,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.25,
+        "mean_circular_abs_error": 6.0,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "GE": {
+        "mae": 10.539238095238098,
+        "rmse": 10.942678204844764,
+        "smape": 106.29792759097472,
+        "n": 3,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.0,
+        "mean_circular_abs_error": 9.0,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "KO": {
+        "mae": 6.527438152125653,
+        "rmse": 7.341775386009733,
+        "smape": 55.32589617887277,
+        "n": 8,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.0,
+        "mean_circular_abs_error": 6.625,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "MO": {
+        "mae": 8.587789543789542,
+        "rmse": 8.896541299773704,
+        "smape": 95.32333451836655,
+        "n": 4,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.0,
+        "mean_circular_abs_error": 8.5,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "NAO": {
+        "mae": 8.02550595238095,
+        "rmse": 8.11987310639518,
+        "smape": 45.60334069181465,
+        "n": 2,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.0,
+        "mean_circular_abs_error": 8.0,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "NO": {
+        "mae": 5.723185374149659,
+        "rmse": 6.534981632935512,
+        "smape": 53.29830359609298,
+        "n": 7,
+        "exact_acc": 0.14285714285714285,
+        "within_1_acc": 0.14285714285714285,
+        "mean_circular_abs_error": 5.571428571428571,
+        "note": "raw fractional hour output; circular metrics use round()"
+      },
+      "OO": {
+        "mae": 3.0018641414141407,
+        "rmse": 3.637609774402798,
+        "smape": 27.490443591786295,
+        "n": 5,
+        "exact_acc": 0.0,
+        "within_1_acc": 0.2,
+        "mean_circular_abs_error": 3.2,
+        "note": "raw fractional hour output; circular metrics use round()"
+      }
+    },
+    "random_split_aggregate": {
+      "macro": {
+        "mae": 6.287508055742676,
+        "rmse": 7.380793509518885,
+        "smape": 63.58795817081452,
+        "n_companies": 8
+      },
+      "weighted": {
+        "mae": 6.41352195084901,
+        "rmse": 7.561819745914379,
+        "smape": 65.58537991589561,
+        "n": 61
+      }
+    },
+    "chronological_split_aggregate": {
+      "macro": {
+        "mae": 6.853225172719146,
+        "rmse": 7.563986440569879,
+        "smape": 62.83659979734559,
+        "n_companies": 8
+      },
+      "weighted": {
+        "mae": 6.2539199798909095,
+        "rmse": 7.058215219775258,
+        "smape": 58.729817881127566,
+        "n": 43
+      }
+    }
+  }
+}

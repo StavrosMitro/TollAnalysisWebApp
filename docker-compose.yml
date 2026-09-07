@@ -69,6 +69,37 @@ services:
       retries: 10
       start_period: 30s
 
+  # ML pipeline runner. NOT part of the normal stack - opt in with the profile:
+  #   docker compose --profile ml run --rm ml -m ml.validate_data
+  #   docker compose --profile ml run --rm ml -m ml.train_all
+  #   docker compose --profile ml run --rm ml -m ml.evaluate_all
+  #   docker compose --profile ml run --rm ml -m ml.evaluate_legacy
+  #   docker compose --profile ml run --rm ml -m ml.smoke_test
+  # Reuses the app image (identical pinned Python + scikit-learn) and mounts the
+  # backend source so regenerated artifacts/reports land on the host.
+  ml:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["ml"]
+    working_dir: /app/back-end
+    environment:
+      PYTHONPATH: /app/back-end
+      PYTHONDONTWRITEBYTECODE: "1"
+      HOST: db
+      DB_PORT: 3306
+      DUSER: ${DUSER:-toll_app}
+      PASSWORD: ${PASSWORD:-toll_app_local_only}
+      DATABASE: ${DATABASE:-toll_analysis}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_local_only}
+    volumes:
+      - ./back-end/ml:/app/back-end/ml
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["/opt/venv/bin/python"]
+    command: ["-m", "ml.validate_data"]
+
   # Optional DB browser. NOT part of the normal stack:
   #   docker compose --profile tools up
   adminer:

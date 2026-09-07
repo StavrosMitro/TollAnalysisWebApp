@@ -1,0 +1,117 @@
+{
+  "generated_at": "2026-09-07T07:51:27.801579+00:00",
+  "artifacts": [
+    {
+      "task": "volume",
+      "operator": "AM",
+      "file": "artifacts/v2/volume/AM.joblib",
+      "val_mae": 0.3101806627304452,
+      "demonstration_only": false
+    },
+    {
+      "task": "peak",
+      "operator": "AM",
+      "file": "artifacts/v2/peak/AM.joblib",
+      "val_within_1_acc": 0.0,
+      "demonstration_only": true
+    },
+    {
+      "task": "volume",
+      "operator": "EG",
+      "file": "artifacts/v2/volume/EG.joblib",
+      "val_mae": 0.3395259628989568,
+      "demonstration_only": false
+    },
+    {
+      "task": "peak",
+      "operator": "EG",
+      "file": "artifacts/v2/peak/EG.joblib",
+      "val_within_1_acc": 0.5,
+      "demonstration_only": true
+    },
+    {
+      "task": "volume",
+      "operator": "GE",
+      "file": "artifacts/v2/volume/GE.joblib",
+      "val_mae": 0.43427414021164024,
+      "demonstration_only": true
+    },
+    {
+      "task": "peak",
+      "operator": "GE",
+      "file": "artifacts/v2/peak/GE.joblib",
+      "val_within_1_acc": 0.0,
+      "demonstration_only": true
+    },
+    {
+      "task": "volume",
+      "operator": "KO",
+      "file": "artifacts/v2/volume/KO.joblib",
+      "val_mae": 0.2791886631603821,
+      "demonstration_only": false
+    },
+    {
+      "task": "peak",
+      "operator": "KO",
+      "file": "artifacts/v2/peak/KO.joblib",
+      "val_within_1_acc": 0.0,
+      "demonstration_only": true
+    },
+    {
+      "task": "volume",
+      "operator": "MO",
+      "file": "artifacts/v2/volume/MO.joblib",
+      "val_mae": 0.2659080905703124,
+      "demonstration_only": false
+    },
+    {
+      "task": "peak",
+      "operator": "MO",
+      "file": "artifacts/v2/peak/MO.joblib",
+      "val_within_1_acc": 0.0,
+      "demonstration_only": true
+    },
+    {
+      "task": "volume",
+      "operator": "NAO",
+      "file": "artifacts/v2/volume/NAO.joblib",
+      "val_mae": 0.5198156383663809,
+      "demonstration_only": false
+    },
+    {
+      "task": "peak",
+      "operator": "NAO",
+      "file": "artifacts/v2/peak/NAO.joblib",
+      "val_within_1_acc": 0.0,
+      "demonstration_only": true
+    },
+    {
+      "task": "volume",
+      "operator": "NO",
+      "file": "artifacts/v2/volume/NO.joblib",
+      "val_mae": 0.33447331166995947,
+      "demonstration_only": false
+    },
+    {
+      "task": "peak",
+      "operator": "NO",
+      "file": "artifacts/v2/peak/NO.joblib",
+      "val_within_1_acc": 0.5,
+      "demonstration_only": true
+    },
+    {
+      "task": "volume",
+      "operator": "OO",
+      "file": "artifacts/v2/volume/OO.joblib",
+      "val_mae": 0.26335139378925393,
+      "demonstration_only": false
+    },
+    {
+      "task": "peak",
+      "operator": "OO",
+      "file": "artifacts/v2/peak/OO.joblib",
+      "val_within_1_acc": 0.0,
+      "demonstration_only": true
+    }
+  ]
+}

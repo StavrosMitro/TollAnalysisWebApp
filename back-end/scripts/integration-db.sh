@@ -17,7 +17,10 @@ INIT_DIR="$(cd "$(dirname "$0")/../../db/init" && pwd)"
 
 case "${1:-up}" in
   up)
-    docker rm -f "$NAME" >/dev/null 2>&1 || true
+    # -fv: also drop the container's anonymous /var/lib/mysql volume. The mysql
+    # image declares VOLUME on that path, so without -v every run leaks a
+    # ~210 MB volume that nothing ever reclaims.
+    docker rm -fv "$NAME" >/dev/null 2>&1 || true
     docker run -d --name "$NAME" \
       -e MYSQL_ROOT_PASSWORD="$ROOT_PW" \
       -e MYSQL_DATABASE="$DB" \
@@ -57,7 +60,7 @@ case "${1:-up}" in
     exit 1
     ;;
   down)
-    docker rm -f "$NAME" >/dev/null 2>&1 || true
+    docker rm -fv "$NAME" >/dev/null 2>&1 || true
     echo "removed $NAME"
     ;;
   env)
