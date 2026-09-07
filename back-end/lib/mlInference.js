@@ -36,14 +36,25 @@ function runInfer(args) {
         };
         const proc = spawn(config.pythonBin, ['-m', 'ml.infer', ...args], {
             cwd: config.paths.backendRoot,
-            env: { ...process.env, PYTHONPATH: config.paths.backendRoot, PYTHONDONTWRITEBYTECODE: '1' },
+            env: {
+                ...process.env,
+                ...config.inference.threadEnv,
+                PYTHONPATH: config.paths.backendRoot,
+                PYTHONDONTWRITEBYTECODE: '1',
+            },
         });
 
         let out = '';
         let err = '';
+        let timedOut = false;
         const timer = setTimeout(() => {
-            proc.kill('SIGKILL');
-            finish(() => reject(new InferenceError('TIMEOUT', 'The prediction took too long.', 504)));
+            // Ask Python to exit cleanly first. The close event reaps the child
+            // before the request slot is released, so timed-out processes do
+            // not become zombies or let another inference start too early.
+            timedOut = true;
+            proc.kill('SIGTERM');
+            const hardKillTimer = setTimeout(() => proc.kill('SIGKILL'), 1000);
+            hardKillTimer.unref();
         }, config.inference.timeoutMs);
 
         proc.stdout.on('data', (d) => { if (out.length < 1024 * 1024) out += d.toString(); });
@@ -57,6 +68,9 @@ function runInfer(args) {
         proc.on('close', (code) => {
             clearTimeout(timer);
             if (settled) return;
+            if (timedOut) {
+                return finish(() => reject(new InferenceError('TIMEOUT', 'The prediction took too long.', 504)));
+            }
             let parsed;
             try {
                 parsed = JSON.parse(out.trim().split('\n').filter(Boolean).pop() || '{}');

@@ -22,44 +22,47 @@ RUN npm run build
 ###############################################################################
 FROM node:20-bookworm-slim AS runtime
 
-# Python runtime + toolchain for native npm modules (bcrypt).
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3 \
-        python3-venv \
-        python3-pip \
-        build-essential \
-        curl \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV VIRTUAL_ENV=/opt/venv
-RUN python3 -m venv "$VIRTUAL_ENV"
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
 WORKDIR /app/back-end
 
-# --- Python deps (pinned) ---
-COPY back-end/requirements.txt ./
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
-
-# --- Node deps (production only) ---
-COPY back-end/package.json back-end/package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+# Install build-only tooling, create the Python runtime, install both runtime
+# dependency sets, then remove build tooling in the same image layer. The
+# final image retains Python, curl (for /livez) and native libraries only.
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+COPY back-end/requirements.txt back-end/package.json back-end/package-lock.json ./
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-venv build-essential curl \
+    && python3 -m venv "$VIRTUAL_ENV" \
+    && pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && npm ci --omit=dev \
+    && npm cache clean --force \
+    && rm -rf /root/.cache /tmp/* \
+    && apt-get purge -y --auto-remove build-essential python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf "$VIRTUAL_ENV"/lib/python*/site-packages/pip* "$VIRTUAL_ENV"/bin/pip*
 
 # --- Application source ---
 COPY back-end/ ./
+# The explicit managed-DB bootstrap reads the same reviewed SQL sources as the
+# local MySQL image; it is never run automatically at application startup.
+COPY db/init /app/db/init
 
 # --- React build served by Express (same origin) ---
 COPY --from=frontend-build /build/front-end/build ./client
-
-# Drop build toolchain to slim the final image.
-RUN apt-get purge -y build-essential && apt-get autoremove -y
 
 ENV NODE_ENV=production \
     PORT=9115 \
     PYTHON_BIN=/opt/venv/bin/python \
     CLIENT_BUILD_DIR=/app/back-end/client \
-    RUNTIME_DIR=/tmp/toll-analysis-runtime
+    RUNTIME_DIR=/tmp/toll-analysis-runtime \
+    DATABASE_CONNECTION_LIMIT=3 \
+    DATABASE_CONNECT_TIMEOUT_MS=10000 \
+    INFERENCE_MAX_CONCURRENT=1 \
+    OMP_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1
 
 # The application source and dependency trees are read-only at runtime. Only
 # generated inference files need ownership, avoiding a slow recursive chown of
@@ -71,6 +74,6 @@ USER node
 EXPOSE 9115
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
-    CMD curl -fsS http://localhost:9115/healthz || exit 1
+    CMD curl -fsS http://localhost:9115/livez || exit 1
 
 CMD ["node", "server.js"]

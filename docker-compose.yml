@@ -41,12 +41,16 @@ services:
       # defaults. Never set this on a hosted deployment.
       ALLOW_INSECURE_LOCAL_DEFAULTS: "true"
       PORT: 9115
-      # DB connection (service name "db" on the compose network).
-      HOST: db
-      DB_PORT: 3306
-      DUSER: ${DUSER:-toll_app}
-      PASSWORD: ${PASSWORD:-toll_app_local_only}
-      DATABASE: ${DATABASE:-toll_analysis}
+      # Canonical DB connection names. The local MySQL service is only a
+      # development dependency; hosted containers use an external hostname.
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      DATABASE_USER: ${DUSER:-toll_app}
+      DATABASE_PASSWORD: ${PASSWORD:-toll_app_local_only}
+      DATABASE_NAME: ${DATABASE:-toll_analysis}
+      DATABASE_SSL: "false"
+      DATABASE_CONNECTION_LIMIT: ${DATABASE_CONNECTION_LIMIT:-3}
+      DATABASE_CONNECT_TIMEOUT_MS: ${DATABASE_CONNECT_TIMEOUT_MS:-10000}
       # Must be >=32 bytes of high-entropy material (openssl rand -hex 32) or the
       # app refuses to start in production. The default here is a valid-shaped
       # THROWAWAY for zero-config local runs - override in .env for anything shared.

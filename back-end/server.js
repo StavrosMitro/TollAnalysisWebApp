@@ -2,10 +2,10 @@ const app = require('./app');
 const config = require('./config');
 const DbService = require('./dbService');
 
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, config.bindHost, () => {
     // eslint-disable-next-line no-console
     console.log(
-        `Toll Analysis backend listening on port ${config.port} (${config.nodeEnv})`
+        `Toll Analysis backend listening on ${config.bindHost}:${config.port} (${config.nodeEnv})`
     );
 });
 

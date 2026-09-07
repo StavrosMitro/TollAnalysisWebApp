@@ -23,6 +23,8 @@ cli-client/token.json
 # image layers.
 back-end/hashPassword.js
 cli-client
+# Tests run on the host/CI and are not imported by the production server.
+back-end/testing
 
 # Editor / OS noise
 **/*.log

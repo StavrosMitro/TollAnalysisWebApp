@@ -7,15 +7,21 @@ const config = require('./config');
 
 // Create a connection pool instead of a single connection.
 // Connection parameters come exclusively from the central config module.
-const pool = mysql.createPool({
+const poolOptions = {
     host: config.db.host,
     user: config.db.user,
     password: config.db.password,
     database: config.db.database,
     port: config.db.port,
     waitForConnections: true,
-    connectionLimit: 10,
-});
+    connectionLimit: config.db.connectionLimit,
+    connectTimeout: config.db.connectTimeout,
+};
+if (config.db.ssl) poolOptions.ssl = config.db.ssl;
+
+// One process-wide pool is shared by every request path. Do not create
+// per-request connections: small hosted plans have strict connection limits.
+const pool = mysql.createPool(poolOptions);
 
 // Promisify the pool.query method for easier use with async/await
 const promisePool = pool.promise();
@@ -503,3 +509,4 @@ ORDER BY grouped.passage_date;
 }
 module.exports = DbService;
 module.exports.closePool = closePool;
+module.exports.getPoolOptions = () => ({ ...poolOptions, ssl: poolOptions.ssl && { ...poolOptions.ssl } });

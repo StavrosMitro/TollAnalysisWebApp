@@ -38,7 +38,7 @@ async function main() {
             passageCount,
             action: missingTables.length === 0
                 ? 'No changes made. Database looks compatible with this demo.'
-                : 'No changes made. Run the reviewed one-time schema and fictional seed import explicitly.',
+                : 'No changes made. Run db:deploy-check, then the reviewed db:deploy-seed command explicitly on an empty database.',
         };
         console.log(JSON.stringify(result));
         process.exitCode = result.schemaReady && result.demoAccount ? 0 : 2;

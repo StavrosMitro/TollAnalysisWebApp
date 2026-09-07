@@ -8,7 +8,9 @@
     "test:unit": "jest --config jest.unit.config.js",
     "test:integration": "bash scripts/run-integration.sh",
     "test:integration:jest": "jest --config jest.integration.config.js --forceExit",
-    "db:status": "node scripts/db-status.js"
+    "db:status": "node scripts/db-status.js",
+    "db:deploy-check": "node scripts/db-deploy-check.js",
+    "db:deploy-seed": "node scripts/db-deploy-seed.js"
   },
   "keywords": [],
   "author": "",

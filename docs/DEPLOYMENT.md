@@ -1,19 +1,22 @@
 # Public portfolio deployment guide
 
-This is a **platform-neutral runbook**, not a provider configuration. It is
-deliberately written for one small always-on application container and one
-private MySQL 8 service/volume. Do not deploy the compose file unchanged to a
-managed platform: use the provider's private database hostname and its secrets
-store instead.
+This is a **platform-neutral runbook**, not a provider configuration. The
+target topology is one small always-on application container and one managed
+MySQL 8 database. Do not deploy the Compose file unchanged to a managed
+platform: use the provider's database hostname, TLS material, and secret store
+instead. A future zero-cost trial deployment can pair a Koyeb application with
+an Aiven MySQL trial, but this repository does not create or deploy either
+resource.
 
 ## Runtime contract
 
-The public service exposes only `PORT` (default `9115`) over managed HTTPS. The
-React production bundle and Express API share that one origin. MySQL listens
-only on the private service network at `3306`; the local compose setup no
-longer publishes it to the host. The Node process creates a short-lived Python
-process for each forecast/peak request, with at most two active processes and a
-20-second timeout by default.
+The public service listens on `0.0.0.0:$PORT` (`PORT` defaults to `9115`) behind
+managed HTTPS. The React production bundle and Express API share that one
+origin. The production database is external and uses the provider endpoint;
+the Compose MySQL service is strictly a local-development convenience. The Node
+process creates a short-lived Python process for each forecast/peak request.
+Public demo mode permits one active inference at a time, a 20-second timeout by
+default, and one BLAS/OpenMP thread per process.
 
 Required deployment variables (put values in the provider's secret/config
 store, never in Git):
@@ -22,66 +25,84 @@ store, never in Git):
 | --- | --- | --- |
 | `NODE_ENV` | `production` | no |
 | `PORT` | platform-injected or `9115` | no |
-| `HOST`, `DB_PORT`, `DUSER`, `DATABASE` | private MySQL connection details | no |
-| `PASSWORD` | dedicated MySQL user password | **yes** |
+| `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USER` | provider MySQL connection details (`DATABASE_PORT=3306` unless supplied otherwise) | no |
+| `DATABASE_PASSWORD` | dedicated MySQL user password | **yes** |
+| `DATABASE_CONNECTION_LIMIT` | `3` (bounded 1–10) | no |
+| `DATABASE_CONNECT_TIMEOUT_MS` | `10000` (bounded 1000–60000) | no |
+| `DATABASE_SSL` | `true` for managed MySQL TLS, otherwise exactly `false` | no |
+| `DATABASE_SSL_CA_BASE64` | base64-encoded provider CA PEM, required when TLS is true | **yes** |
 | `JWT_SECRET` | `openssl rand -hex 32` output | **yes** |
 | `PUBLIC_DEMO_MODE` | `true` | no |
 | `DISABLE_DESTRUCTIVE_OPS` | `true` (required with public mode) | no |
 | `TRUST_PROXY` | `true` behind exactly one managed proxy | no |
 | `DEMO_TOKEN_TTL_MINUTES` | `60`–`120`, default `90` | no |
 | `INFERENCE_TIMEOUT_MS` | `1000`–`60000`, default `20000` | no |
-| `INFERENCE_MAX_CONCURRENT` | `1`–`8`, default `2` | no |
+| `INFERENCE_MAX_CONCURRENT` | `1`–`8`, default `1` in public demo mode | no |
 | `CORS_ALLOWED_ORIGINS` | empty for this same-origin deployment | no |
 
-Production refuses to start with a weak/missing `JWT_SECRET`, a known local DB
-password, or `PUBLIC_DEMO_MODE=true` without destructive operations disabled.
-`ALLOW_INSECURE_LOCAL_DEFAULTS=true` exists only in the checked-in local Compose
-configuration so its throwaway defaults remain convenient; do not set it on a
-hosted deployment.
+Production refuses to start with a weak/missing `JWT_SECRET`, missing database
+settings, invalid pool/timeout values, malformed/missing TLS CA data when TLS
+is enabled, a known local DB password, or `PUBLIC_DEMO_MODE=true` without
+destructive operations disabled. TLS CA data is decoded only in memory and
+uses certificate verification (`rejectUnauthorized: true`). The legacy
+`HOST`/`DB_PORT`/`DUSER`/`PASSWORD`/`DATABASE` names remain local Compose
+fallbacks only; use the canonical `DATABASE_*` names for a hosted service.
 
 ## Database lifecycle
 
-`db/init/*.sql` is MySQL image initialization material: it runs **only for an
-empty MySQL data volume**. Normal application startup never runs SQL that
-creates, seeds, resets, or overwrites a database.
+`db/init/*.sql` is Docker-entrypoint material, not a managed-provider import
+interface. It contains `DROP`, root-definer, lock, and dump-optimisation
+directives that make it unsuitable for direct managed deployment. Normal
+application startup never creates, seeds, resets, drops, or overwrites data.
 
 1. Create a private, persistent MySQL 8 database and a least-privileged
-   application user. Take a provider snapshot before importing anything.
-2. Against a verified empty fictional-demo database, import in order:
+   application user. Take a provider snapshot before any import.
+2. Run the read-only check from the release image or a configured release shell:
 
    ```bash
-   mysql --host "$HOST" --port "$DB_PORT" --user "$DUSER" --password "$DATABASE" < db/init/01-schema.sql
-   mysql --host "$HOST" --port "$DB_PORT" --user "$DUSER" --password "$DATABASE" < db/init/02-data.sql
-   mysql --host "$HOST" --port "$DB_PORT" --user "$DUSER" --password "$DATABASE" < db/init/03-demo-account.sql
+   cd back-end && npm run db:deploy-check
    ```
 
-   These are a reviewed, one-time fictional seed operation—not application
-   startup commands. The scripts are not a general migration framework.
-3. Run the read-only preflight in an app image or equivalent release shell:
+   It only reports whether the target is empty or compatible; it changes
+   nothing and never prints credentials.
+3. Against a verified empty fictional-demo database, perform the reviewed
+   one-time seed explicitly:
 
    ```bash
-   cd back-end && npm run db:status
+   cd back-end
+   CONFIRM_DB_DEPLOY=true npm run db:deploy-seed
+   npm run db:status
    ```
 
-   It verifies the expected table set, the demo identity and seed passage
-   count; it does not change data. A restart/redeploy only reconnects to the
-   existing database.
-4. Use provider snapshots/backups and test restore into a **separate** MySQL
-   instance. A portable logical backup is:
+   The seed command refuses any existing table, reads the reviewed repository
+   SQL directly, strips Docker-only destructive/root/lock directives in memory,
+   and does not put a password on a command line. It has no `drop`, `reset`, or
+   automatic-startup path. A failure may leave partial DDL/data behind; restore
+   from a provider snapshot or inspect the disposable target before retrying.
+4. Use provider snapshots/backups and test restore only into a **separate**
+   MySQL instance. A restart/redeploy only reconnects to the existing database;
+   it never runs the bootstrap.
 
-   ```bash
-   mysqldump --single-transaction --routines --host "$HOST" --port "$DB_PORT" --user "$DUSER" --password "$DATABASE" > toll-analysis-demo.sql
-   ```
-
-   Restore only after creating a separate target database. Never point a reset
-   or import command at the live database. To reset the fictional dataset, stop
-   the app, snapshot/export it, drop **only the confirmed demo database**, then
-   repeat the explicit three imports above. This is intentionally manual.
+Use separate provider credentials where supported: the one-off importer needs
+schema/data creation privileges for an empty target, while the long-running
+application user needs only the normal application read/write privileges. Do
+not grant either identity `DROP`, database-administration, or broad server
+privileges for this demo.
 
 ## Checks and safety notes
 
 * `GET /livez` is liveness (Node process only); `GET /healthz` is readiness and
   returns `503` with a non-sensitive body while MySQL is unavailable.
+* The application uses one shared, bounded MySQL pool and closes it during a
+  graceful shutdown. No request path creates a pool or embeds credentials in
+  logs, health responses, or command arguments.
+* The production filesystem is treated as ephemeral. Public-mode write paths
+  (uploads, training, figures, and destructive mutation) are backend-blocked;
+  the temporary runtime directory is under the OS temp directory. Persistent
+  files must use an explicitly provisioned external store in a future feature.
+* Set the app container to a small limit (for example 512 MB) and set alerting
+  at roughly 80% memory/CPU. Keep MySQL capacity and backups on the managed
+  service rather than co-locating it with this application container.
 * In public mode `POST /api/login` is rejected before any user lookup. Only
   `POST /api/auth/demo-login` issues a short-lived `demo` token. All admin,
   bulk upload, training, reset and debt mutation routes remain backend-blocked.
@@ -90,6 +111,26 @@ creates, seeds, resets, or overwrites a database.
 * `back-end/hashPassword.js` is excluded from runtime image layers. Historical
   fixture credentials remain a repository-history concern, not deployment
   credentials; public mode blocks them at the API boundary.
+
+## Local constrained verification
+
+Use a disposable MySQL container on a private Docker network (not the Compose
+`db` service), seed it through the explicit command above, then run the app
+with the provider-style `DATABASE_*` environment values. A representative
+memory check is:
+
+```bash
+docker run --rm --memory=512m --memory-swap=512m --pids-limit=100 \
+  -e NODE_ENV=production -e PUBLIC_DEMO_MODE=true \
+  -e DISABLE_DESTRUCTIVE_OPS=true -e DATABASE_HOST=external-mysql \
+  -e DATABASE_NAME=toll_analysis -e DATABASE_USER=... \
+  -e DATABASE_PASSWORD=... toll-analysis:local
+```
+
+First assess functional memory behavior with a reasonable CPU allocation, then
+repeat the latency measurement separately with `--cpus=0.1` and generous
+request timeouts. CPU throttling is a capacity measurement, not a reason to
+weaken the inference timeout or correctness contract.
 
 ## PyVis and CSP
 
@@ -147,36 +188,15 @@ from the final runtime image and are not emitted into the browser bundle. A
 compatible fix would require the explicitly out-of-scope CRA migration or a
 separate reviewed toolchain update.
 
-## Provider choice, checked September 2026
+## Future managed-service example
 
-**Recommendation: Railway Hobby.** It is the most direct fit: one custom
-Dockerfile service, a private MySQL service with persistent volume, HTTPS and
-custom domains, environment secrets, restart/health-check support, logs and
-built-in volume/database backups. Its Hobby minimum is **$5/month**, including
-the first $5 of usage; resource pricing is $10/GB-month RAM, $20/vCPU-month and
-$0.15/GB-month volume storage. A continuously running 512 MB app plus a small
-MySQL service will likely exceed the included credit; budget roughly
-**$10–$25/month plus $0.05/GB egress**, then set a hard usage limit. A payment
-card is required after the one-time trial. Cold starts are avoided while kept
-running, but an explicit usage hard limit can stop services.
-
-**Fallback: Render Hobby with a self-managed MySQL service and persistent
-disk.** Render supports Docker web services, HTTPS/custom domains, secrets,
-logs and restarts, but its managed relational product is Postgres; MySQL is a
-custom database service on a paid persistent disk. That means the smallest
-realistic topology is a 512 MB paid web service plus a separate paid MySQL
-container/disk—typically about **$14–$20/month before disk and bandwidth**,
-with more operational responsibility for MySQL backups. Render's free web
-service has cold starts and free Postgres expires after 30 days, so neither is
-appropriate for a reliable MySQL-backed public demo.
-
-Fly.io was not selected: its managed database offering is Postgres and a MySQL
-deployment would be self-operated on a volume, with more VM/networking work for
-this portfolio scope. Its $0.15/GB-month volume and snapshot charges can also
-continue while Machines are stopped.
-
-Current official sources: [Railway pricing](https://docs.railway.com/pricing),
-[Railway MySQL](https://docs.railway.com/databases/mysql), [Render pricing and
-Docker support](https://render.com/pricing), [Render datastore policy](https://render.com/docs/faq),
-[Render free-tier limitations](https://render.com/docs/free), and [Fly resource
-pricing](https://fly.io/docs/about/pricing/).
+For a future trial, provision the app and database separately: a Koyeb app
+service builds this Dockerfile and an Aiven MySQL service supplies the private
+endpoint (or its public TLS endpoint where private networking is unavailable).
+Set the canonical `DATABASE_*` variables in the app secret/config store,
+including `DATABASE_SSL=true` and the base64 CA PEM. Do not set an internal
+Compose host such as `db` on the provider. Configure `/livez` as the process
+health probe and `/healthz` as the readiness probe, then run the explicit
+database check/seed sequence from a one-off release shell. This is guidance
+only: no cloud account, database, deployment, or billing resource is created
+by this repository.
