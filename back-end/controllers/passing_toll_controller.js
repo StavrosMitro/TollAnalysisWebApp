@@ -38,9 +38,22 @@ const passing_toll = async (req, res) => {
         const lastPId_before = lastPassageId; // Store the last passage ID before running the script
 
         // Run the Python script (script + csv paths are absolute).
-        const { stdout, stderr } = await execPromise(
-            `"${config.pythonBin}" "${python_escaped}" "${escapedFilePath}"`
-        );
+        let stdout;
+        try {
+            ({ stdout } = await execPromise(
+                `"${config.pythonBin}" "${python_escaped}" "${escapedFilePath}"`
+            ));
+        } finally {
+            // The importer has consumed the upload. Do not retain user data on disk.
+            await new Promise((resolve) => {
+                fs.unlink(csvFilePath, (unlinkError) => {
+                    if (unlinkError && unlinkError.code !== 'ENOENT') {
+                        console.error('Error deleting uploaded CSV:', unlinkError.message);
+                    }
+                    resolve();
+                });
+            });
+        }
 
         // Fetch the new records added since the last passage ID
         const newRecords = await dbService.getRecordsBetweenIds(lastPId_before);
