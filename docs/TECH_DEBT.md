@@ -4,6 +4,21 @@ Known compromises carried intentionally, with the reason and the intended fix.
 
 ---
 
+## Legacy passage-import path
+
+`PUT /api/passing_toll` is an **admin-only** legacy import path. It is disabled
+in the public portfolio demo by the destructive-operations guard and must not
+be treated as a performance-optimized ingestion mechanism.
+
+Before this path can be enabled for a real deployment, it needs an atomic
+redesign: side effects must be based only on rows proven to have been inserted
+and all passage, balance, and debt changes must commit or roll back together.
+That work also requires disposable-database integration tests covering duplicate
+passages, balance and debt updates, and forced rollback. Until then, keep it
+disabled outside an explicitly controlled administrative environment.
+
+---
+
 ## Dependency security remediation (Milestone F)
 
 The September 2026 focused audit updated `mysql2` to `3.24.3`, removed the
