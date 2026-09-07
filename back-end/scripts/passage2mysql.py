@@ -5,6 +5,7 @@ import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
 import os
+import csv
 import random
 
 # Load environment variables from .env file
@@ -24,122 +25,75 @@ def get_db_connection():
         print(f"Error connecting to database: {e}")
         sys.exit(1)
 
-CHUNK_SIZE = 1000
+# Insert data into Transceiver table
+def insert_transceiver(cursor, tag_ref, company_id, balance):
+    # Check if tagRef already exists
+    cursor.execute("SELECT COUNT(*) FROM Transceiver WHERE tagRef = %s", (tag_ref,))
+    count = cursor.fetchone()[0]
+    
+    if count == 0:
+        query = """
+        INSERT INTO Transceiver (tagRef, company_id, balance) 
+        VALUES (%s, %s, %s)
+        """
+        cursor.execute(query, (tag_ref, company_id, balance))
+        print(f"Inserted tagRef: {tag_ref}, company_id: {company_id}, balance: {balance}")
+    else:
+        print(f"Duplicate tagRef found: {tag_ref}, skipping insert.")
 
-
-def select_existing_keys(cursor, table, columns, rows):
-    """Return existing composite keys for the current chunk."""
-    if not rows:
-        return set()
-
-    row_placeholder = "(" + ", ".join(["%s"] * len(columns)) + ")"
-    placeholders = ", ".join([row_placeholder] * len(rows))
-    query = (
-        f"SELECT {', '.join(columns)} FROM {table} "
-        f"WHERE ({', '.join(columns)}) IN ({placeholders})"
-    )
-    values = [value for row in rows for value in row]
-    cursor.execute(query, values)
-    return {tuple(result) for result in cursor.fetchall()}
-
-
-def insert_data(cursor, conn, csv_file_path):
+# Insert data into Passages and handle logic
+def insert_data(cursor, conn, df):
     try:
         # Deactivate previous debts before inserting new data
         cursor.execute("""UPDATE Debt SET is_active = 0;""")
-
-        for chunk in pd.read_csv(csv_file_path, chunksize=CHUNK_SIZE):
-            rows = list(chunk.itertuples(index=False, name=None))
-            columns = list(chunk.columns)
-            index = {column: position for position, column in enumerate(columns)}
-
-            # Add only new transceivers in one database round trip.
-            transceiver_rows = {}
-            for row in rows:
-                tag_ref = row[index['tagRef']]
-                transceiver_rows.setdefault(
-                    tag_ref,
-                    (tag_ref, row[index['tagHomeID']], round(random.uniform(0, 80), 2))
-                )
+        
+        for _, row in df.iterrows():
             cursor.execute(
-                "SELECT tagRef FROM Transceiver WHERE tagRef IN ({})".format(
-                    ", ".join(["%s"] * len(transceiver_rows))
-                ),
-                list(transceiver_rows),
+                """SELECT passage_id FROM Passages WHERE timestamp=%s AND tollID=%s AND tagRef=%s AND tagHomeID=%s AND charge=%s""",
+                (row['timestamp'], row['tollID'], row['tagRef'], row['tagHomeID'], row['charge'])
             )
-            existing_transceivers = {result[0] for result in cursor.fetchall()}
-            new_transceivers = [
-                value for tag_ref, value in transceiver_rows.items()
-                if tag_ref not in existing_transceivers
-            ]
-            if new_transceivers:
-                cursor.executemany(
-                    """INSERT INTO Transceiver (tagRef, company_id, balance)
-                    VALUES (%s, %s, %s)""",
-                    new_transceivers,
-                )
-
-            passage_rows = [
-                (
-                    row[index['timestamp']], row[index['tollID']],
-                    row[index['tagRef']], row[index['tagHomeID']], row[index['charge']]
-                )
-                for row in rows
-            ]
-            existing_passages = select_existing_keys(
-                cursor,
-                'Passages',
-                ['timestamp', 'tollID', 'tagRef', 'tagHomeID', 'charge'],
-                passage_rows,
-            )
-            new_passages = [row for row in passage_rows if row not in existing_passages]
-            if not new_passages:
-                continue
-
-            cursor.executemany(
+            checker = cursor.fetchone()
+            if checker:
+                continue  # Skip if entry already exists in Passages
+            
+            # Insert new passage
+            cursor.execute(
                 """INSERT IGNORE INTO Passages (timestamp, tollID, tagRef, tagHomeID, charge)
                 VALUES (%s, %s, %s, %s, %s)""",
-                new_passages,
+                (row['timestamp'], row['tollID'], row['tagRef'], row['tagHomeID'], row['charge'])
             )
-
-            cursor.executemany(
-                "UPDATE Transceiver SET balance = balance - %s WHERE tagRef = %s",
-                [(row[4], row[2]) for row in new_passages],
-            )
-
-            tag_refs = list({row[2] for row in new_passages})
-            toll_ids = list({row[1] for row in new_passages})
+            
+            # Update balance in Transceiver
             cursor.execute(
-                "SELECT tagRef, company_id FROM Transceiver WHERE tagRef IN ({})".format(
-                    ", ".join(["%s"] * len(tag_refs))
-                ),
-                tag_refs,
+                """UPDATE Transceiver SET balance = balance - %s WHERE tagRef=%s""",
+                (row['charge'], row['tagRef'])
             )
-            transceiver_companies = dict(cursor.fetchall())
-            cursor.execute(
-                "SELECT Toll_id, OpID FROM Toll WHERE Toll_id IN ({})".format(
-                    ", ".join(["%s"] * len(toll_ids))
-                ),
-                toll_ids,
-            )
-            toll_operators = dict(cursor.fetchall())
 
-            debt_rows = []
-            for row in new_passages:
-                transceiver_company = transceiver_companies.get(row[2])
-                toll_op_id = toll_operators.get(row[1])
-                if not transceiver_company or not toll_op_id:
-                    continue
-                if transceiver_company != toll_op_id:
-                    debt_rows.append((row[1], row[2], transceiver_company, toll_op_id, row[0], row[4]))
+            # Retrieve company_id from Transceiver for tagRef
+            cursor.execute("""SELECT company_id FROM Transceiver WHERE tagRef = %s""", (row['tagRef'],))
+            transceiver_company = cursor.fetchone()
+            if not transceiver_company:
+                print(f"No company found for tagRef: {row['tagRef']}")
+                continue
+            transceiver_company = transceiver_company[0]
 
-            if debt_rows:
-                cursor.executemany(
+            # Retrieve OpID from Toll for tollID
+            cursor.execute("""SELECT OpID FROM Toll WHERE Toll_id = %s""", (row['tollID'],))
+            toll_op_id = cursor.fetchone()
+            if not toll_op_id:
+                print(f"No OpID found for Toll_id: {row['tollID']}")
+                continue
+            toll_op_id = toll_op_id[0]
+
+            # Insert Debt if companies are different
+            if transceiver_company != toll_op_id:
+                cursor.execute(
                     """INSERT INTO Debt (toll_id, tagRef, debtor_company_id, creditor_company_id, timestamp, amount)
                     VALUES (%s, %s, %s, %s, %s, %s)""",
-                    debt_rows,
+                    (row['tollID'], row['tagRef'], transceiver_company, toll_op_id, row['timestamp'], row['charge'])
                 )
 
+            # Update TotalDebts table with the latest debt summary
             cursor.execute(
                 """
                 UPDATE TotalDebts td
@@ -154,15 +108,13 @@ def insert_data(cursor, conn, csv_file_path):
                 SET td.total_amount = debt_summary.total_amount;
                 """
             )
-
+        
         # Commit all changes after processing
         conn.commit()
         print("OK, queries executed without error")
 
     except Error as e:
         print(f"Error: {e}")
-        conn.rollback()
-        raise
 
 if __name__ == "__main__":
     # Establish database connection
@@ -172,11 +124,22 @@ if __name__ == "__main__":
     # CSV file path is passed as an argument to the script
     csv_file_path = sys.argv[1]
 
+    # Insert Transceiver data
+    with open(csv_file_path, mode='r') as file:
+        csv_reader = csv.DictReader(file)
+        for row in csv_reader:
+            tag_ref = row['tagRef']
+            tag_home_id = row['tagHomeID']
+            # Random balance for the transceiver between 0 and 80
+            balance = round(random.uniform(0, 80), 2)
+            insert_transceiver(cursor, tag_ref, tag_home_id, balance)
+
+    # Process Passages data
     try:
-        insert_data(cursor, conn, csv_file_path)
+        data = pd.read_csv(csv_file_path)
+        insert_data(cursor, conn, data)
     except Exception as e:
         print(f"Failed to process CSV: {e}")
-        sys.exit(1)
 
     # Close connection
     cursor.close()
