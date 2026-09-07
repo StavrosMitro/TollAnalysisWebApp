@@ -24,32 +24,36 @@ case "${1:-up}" in
       -p "${PORT}:3306" \
       -v "${INIT_DIR}:/docker-entrypoint-initdb.d:ro" \
       mysql:8.0 >/dev/null
-    echo "waiting for $DB ..."
-    seeded=0
-    for _ in $(seq 1 60); do
-      if docker exec "$NAME" mysql -uroot -p"$ROOT_PW" "$DB" \
-           -e "SELECT COUNT(*) FROM Passages" >/dev/null 2>&1; then
-        seeded=1
+    echo "waiting for $DB (running schema + seed) ..."
+    # The mysql image runs a TEMPORARY server to execute the init scripts, then
+    # shuts it down and starts the real one. We must wait for the entrypoint's
+    # "ready for start up" marker AND then for the real server + a query to
+    # succeed over the host port - otherwise tests connect to a dying server.
+    ready=0
+    for _ in $(seq 1 90); do
+      if docker logs "$NAME" 2>&1 | grep -q "MySQL init process done. Ready for start up." \
+         && docker exec "$NAME" mysqladmin ping -uroot -p"$ROOT_PW" --silent >/dev/null 2>&1 \
+         && docker exec "$NAME" mysql -uroot -p"$ROOT_PW" "$DB" -e "SELECT COUNT(*) FROM Passages" >/dev/null 2>&1; then
+        ready=1
         break
       fi
       sleep 2
     done
-    if [ "$seeded" -ne 1 ]; then
+    if [ "$ready" -ne 1 ]; then
       echo "timed out waiting for MySQL" >&2
-      docker logs "$NAME" | tail -20 >&2
+      docker logs "$NAME" 2>&1 | tail -20 >&2
       exit 1
     fi
-    # MySQL is ready on its internal socket; wait for the host port proxy too.
+    # Now confirm the host port proxy answers a real query.
     for _ in $(seq 1 30); do
-      if (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null; then
-        exec 3>&- 3<&-
+      if node -e "require('mysql2/promise').createConnection({host:'127.0.0.1',port:${PORT},user:'root',password:'${ROOT_PW}',database:'${DB}'}).then(c=>c.query('SELECT 1').then(()=>c.end())).then(()=>process.exit(0)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
         echo "ready. export:"
         "$0" env
         exit 0
       fi
       sleep 1
     done
-    echo "MySQL up but host port ${PORT} not reachable" >&2
+    echo "MySQL up but host port ${PORT} not usable" >&2
     exit 1
     ;;
   down)
