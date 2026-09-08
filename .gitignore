@@ -24,6 +24,8 @@ cert.pem
 key.pem
 back-end/key.pem
 back-end/cert.pem
+*.pem
+*.crt
 
 # Machine Learning runtime data (generated at request time)
 back-end/ml/results/
@@ -44,3 +46,7 @@ __pycache__/
 # OS / editor
 .DS_Store
 front-end/.visual/
+
+.secrets/
+**/.secrets/
+.env.aiven.local

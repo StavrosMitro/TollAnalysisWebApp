@@ -10,9 +10,15 @@ front-end/build
 back-end/client
 
 # Local env / secrets
+.env
+.env.*
 **/.env
 **/.env.*
 !**/.env.example
+.secrets/
+**/.secrets/
+*.pem
+*.crt
 
 # Runtime / generated artefacts
 back-end/var
