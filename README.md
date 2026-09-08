@@ -135,6 +135,18 @@ cd front-end && npm run visual-check # running stack + Chromium required
 
 Deploy one application container beside private persistent MySQL, store secrets with the provider, import the fictional seed once into an empty database, configure `/healthz`, and retain backups. Public mode requires `PUBLIC_DEMO_MODE=true` and `DISABLE_DESTRUCTIVE_OPS=true`. Railway is currently recommended, not an existing deployment. See the [deployment runbook](docs/DEPLOYMENT.md).
 
+### Continuous integration
+
+GitHub Actions runs whitespace/secret-path checks, backend units, frontend tests
+and a production build, plus the repository-owned disposable MySQL integration
+suite for pull requests to `main` and pushes to `main`. The heavier pinned ML
+container/artifact smoke checks and production Docker build run on `main` and
+when manually started with **Actions → CI → Run workflow**, rather than on every
+pull request because they build the approximately 945 MB runtime image. CI uses
+only fictional disposable MySQL data; it never receives provider credentials or
+connects to Aiven. This workflow validates code only—deployment remains manual
+and is not implemented by GitHub Actions.
+
 ## Repository map and documentation
 
 ```text
